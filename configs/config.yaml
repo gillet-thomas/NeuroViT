@@ -10,8 +10,8 @@ csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/paths_ADNI_fMRI_MRI.csv'
 # Training
 seed: 42
 learning_rate: 0.0001
-epochs: 50
-batch_size: 2             # Test with 32
+epochs: 5
+batch_size: 64             # Test with 32
 # weight_decay: 0.1
-val_interval: 20           ## Validation every 100 iterations
+val_interval: 2           ## Validation every 100 iterations
 projection_dim: 1024

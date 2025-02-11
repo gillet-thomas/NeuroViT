@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 from vit_pytorch.vit_3d import ViT
  
 
@@ -10,14 +11,11 @@ class fmriEncoder(nn.Module):
         self.to(self.device)  # Move entire model to device at once
 
         self.encoder = ViT3DEncoder(config)
-        self.projection = ProjectionHead(config, embedding_dim=1024)
+        self.projection = ProjectionHead(config)
 
     def forward(self, x):
         x = x.to(self.device)  # Ensure input is on correct device
         timepoints_encodings = self.encoder(x)
-        print(f"Timepoints encodings type: {type(timepoints_encodings)}")
-        print(f"Timepoints encodings shape: {timepoints_encodings[0].shape}")
-        
         timepoints_encodings = self.projection(timepoints_encodings)
         return timepoints_encodings
     
@@ -53,15 +51,18 @@ class ViT3DEncoder(nn.Module):
             timepoints_encodings.append(encoding)
 
         print(f"Total timepoints encoded: {len(timepoints_encodings)}") # 70 timepoints encoded (one out of two)
-        return timepoints_encodings
+        vector_encodings = torch.stack(timepoints_encodings, dim=1) # shape (batch_size, 70, 1024)
+        return vector_encodings
 
 class ProjectionHead(nn.Module):
-    def __init__(self, config, embedding_dim):
+    def __init__(self, config):
         super().__init__()
-        
-        # Embedding dim is 1024 for fmri
-        self.projection = nn.Linear(embedding_dim, config["projection_dim"])
+        self.projection = nn.Linear(70, 1) # Map 70 timepoint encodings to a single vector
 
     def forward(self, x):
-        print(f"Projection head input shape: {x.shape}")
-        return self.projection(x)
+        # x is a tensor of shape (batch_size, 70, 1024)
+        permuted_x = x.permute(0, 2, 1)             # shape (batch_size, 1024, 70)
+        encodings = self.projection(permuted_x)     # shape (batch_size, 1024, 1)
+        encodings = encodings.squeeze()             # shape (batch_size, 1024)
+
+        return encodings

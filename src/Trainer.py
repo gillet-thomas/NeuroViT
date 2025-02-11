@@ -9,6 +9,7 @@ class Trainer():
         self.val_data = dataset_val
         self.device = config['device']
         self.model = model.to(self.device)
+        self.criterion = nn.CrossEntropyLoss()
 
         self.epochs = config['epochs']
         self.batch_size = config['batch_size']
@@ -33,16 +34,15 @@ class Trainer():
     def train(self, epoch):
         self.model.train()
         running_loss = 0.0
-        val_interval = self.config['val_interval']
 
-        criterion = nn.CrossEntropyLoss()
+        val_interval = self.config['val_interval']
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
 
         for i, (subject, fmri, group, age, sex) in enumerate(self.dataloader):
             fmri, group = fmri.to(self.device), group.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
-
             outputs = self.model(fmri)
-            loss = criterion(outputs, group)
+            print("Model output shape:", outputs.shape)
+            loss = self.criterion(outputs, group.argmax(dim=1))
             
             optimizer.zero_grad()
             loss.backward()
@@ -61,11 +61,13 @@ class Trainer():
         val_loss = 0.0
 
         with torch.no_grad():
-            for i, (subject, fmri, group, _, _) in enumerate(self.val_dataloader):
+            for i, (subject, fmri, group, age, sex) in enumerate(self.val_dataloader):
                 fmri, group = fmri.to(self.device), group.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
-                loss = self.model(fmri)
+                
+                outputs = self.model(fmri)
+                loss = self.criterion(outputs, group.argmax(dim=1))
+                
                 val_loss += loss.item()
-                # print(f"Epoch {epoch}, Batch {i}: validation loss {loss.item()}, average loss {val_loss/(i+1)}")
             
             avg_val_loss = val_loss / len(self.val_dataloader)
             print(f"VALIDATION - Epoch {epoch}, Total batch {i}, avg validation loss {avg_val_loss}")

@@ -21,6 +21,16 @@ class ADNIDataset(Dataset):
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
+        # Check if height and width are 64x64
+        processed_data = []
+        for sample in self.data:
+            fmri = sample['fmri']
+            if fmri.shape[0] == 64 and fmri.shape[1] == 64:
+                processed_data.append(sample)
+            else:
+                print(f"Error: Expected height and width to be 64x64, got {fmri.shape[0]}x{fmri.shape[1]}")
+        self.data = processed_data
+
         self.train_data, self.val_data = torch.utils.data.random_split(self.data, [0.80, 0.20])
         self.data = self.train_data if mode == 'train' else self.val_data
         print(f"{self.dataset_path} initialized: {len(self.data)} {mode} samples/{len(self.data)} total")
@@ -73,14 +83,14 @@ class ADNIDataset(Dataset):
         age = torch.tensor(age)
         
         # One-hot encode categorical variables using PyTorch
-        group_classes = ['CN', 'AD', 'EMCI', 'LMCI', 'SMC']
+        group_classes = ['CN', 'AD', 'EMCI', 'LMCI', 'MCI', 'SMC']
         group_index = group_classes.index(group)    
-        group_encoded = F.one_hot(torch.tensor([group_index]), num_classes=len(group_classes))
-        
+        group_encoded = F.one_hot(torch.tensor(group_index), num_classes=len(group_classes))
+
         sex_classes = ['F', 'M']
         sex_index = sex_classes.index(sex)
-        sex_encoded = F.one_hot(torch.tensor([sex_index]), num_classes=len(sex_classes))
-        
+        sex_encoded = F.one_hot(torch.tensor(sex_index), num_classes=len(sex_classes))
+
         return subject, fmri, group_encoded, sex_encoded, age
     
     def __len__(self):
