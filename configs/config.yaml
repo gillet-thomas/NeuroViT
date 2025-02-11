@@ -1,0 +1,17 @@
+# Global
+output_dir: './results'
+training_enabled: 1
+wandb_enabled: 0
+cuda_device: 2
+dataset_path: './src/data/adni_dataset.pkl'
+mini_dataset_path: './src/data/adni_dataset_mini.pkl'
+csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/paths_ADNI_fMRI_MRI.csv'
+
+# Training
+seed: 42
+learning_rate: 0.0001
+epochs: 50
+batch_size: 2             # Test with 32
+# weight_decay: 0.1
+val_interval: 20           ## Validation every 100 iterations
+projection_dim: 1024
