@@ -2,6 +2,7 @@ import wandb
 import torch
 from tqdm import tqdm
 import torch.nn as nn
+
 class Trainer():
     def __init__(self, config, model, dataset_train, dataset_val):
         self.config = config
@@ -13,8 +14,8 @@ class Trainer():
 
         self.epochs = config['epochs']
         self.batch_size = config['batch_size']
-        self.dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=True, num_workers=0)
-        self.val_dataloader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False, num_workers=0)
+        self.dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=True)
+        self.val_dataloader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False)
 
         total_params = sum(p.numel() for p in self.model.parameters())
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
@@ -30,18 +31,18 @@ class Trainer():
 
         torch.save(self.model.state_dict(), './results/model.pth')
         print("Model saved to ./results/model.pth")
-
+    
     def train(self, epoch):
         self.model.train()
         running_loss = 0.0
 
-        val_interval = self.config['val_interval']
+        log_interval = self.config['log_interval']
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
 
         for i, (subject, fmri, group, age, sex) in enumerate(self.dataloader):
             fmri, group = fmri.to(self.device), group.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
-            outputs = self.model(fmri)
-            print("Model output shape:", outputs.shape)
+
+            outputs = self.model(fmri)  # output is [batch_size, 1024]
             loss = self.criterion(outputs, group.argmax(dim=1))
             
             optimizer.zero_grad()
@@ -50,9 +51,9 @@ class Trainer():
 
             running_loss += loss.item()
 
-            if i != 0 and i % val_interval == 0:
-                print(f"Epoch {epoch}, Batch {i}: train loss {running_loss/val_interval}")
-                wandb.log({"epoch": epoch, "batch": i, "train loss": running_loss/val_interval})
+            if i != 0 and i % log_interval == 0:
+                print(f"Epoch {epoch}, Batch {i}: train loss {running_loss/log_interval}")
+                wandb.log({"epoch": epoch, "batch": i, "train loss": running_loss/log_interval})
                 running_loss = 0.0
 
 
@@ -63,10 +64,8 @@ class Trainer():
         with torch.no_grad():
             for i, (subject, fmri, group, age, sex) in enumerate(self.val_dataloader):
                 fmri, group = fmri.to(self.device), group.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
-                
                 outputs = self.model(fmri)
                 loss = self.criterion(outputs, group.argmax(dim=1))
-                
                 val_loss += loss.item()
             
             avg_val_loss = val_loss / len(self.val_dataloader)

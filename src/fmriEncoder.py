@@ -44,13 +44,12 @@ class ViT3DEncoder(nn.Module):
         timepoints = x.unbind(4) # Unbind the 4th dimension (timepoints dim)
 
         timepoints_encodings = []
-        for i, timepoint in enumerate(timepoints[::2]):
+        for i, timepoint in enumerate(timepoints):              # 70 timepoints encoded (one out of two)
             timepoint = timepoint.permute(0, 3, 1, 2)           # ([batch_size, 48, 64, 64]) batch, frames, height, width
             timepoint = timepoint.unsqueeze(1)                  # Add channel dimension ([batch_size, 1, 48, 64, 64])
             encoding = self.encoder(timepoint)                  # Encode each timepoint with 3D-ViT                  
-            timepoints_encodings.append(encoding)
+            timepoints_encodings.append(encoding)               
 
-        print(f"Total timepoints encoded: {len(timepoints_encodings)}") # 70 timepoints encoded (one out of two)
         vector_encodings = torch.stack(timepoints_encodings, dim=1) # shape (batch_size, 70, 1024)
         return vector_encodings
 
