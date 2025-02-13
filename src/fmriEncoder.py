@@ -15,15 +15,17 @@ class fmriEncoder(nn.Module):
 
     def forward(self, x):
         x = x.to(self.device)  # Ensure input is on correct device
-        timepoints_encodings = self.encoder(x)
-        timepoints_encodings = self.projection(timepoints_encodings)
+        timepoints_encodings = self.encoder(x) # OUtput is 32, 140, 1024
+        timepoints_encodings = self.projection(timepoints_encodings) # 32, 1024 linear to 32, 4
         return timepoints_encodings
     
+
 class ViT3DEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
 
         self.device = config["device"]
+        self.timepoint_batch_size = config["timepoint_batch_size"]
         self.encoder = ViT(
             frames = 48,               # number of frames (fmri slices)
             image_size = 64,           # image size (64x64)
@@ -37,31 +39,54 @@ class ViT3DEncoder(nn.Module):
             mlp_dim = 2048,
             dropout = 0.1,
             emb_dropout = 0.1
-        )
+        ).to(self.device)
     
     def forward(self, x):
         # x is fmri tensor of shape (batch_size, 64, 64, 48, 140)
         timepoints = x.unbind(4) # Unbind the 4th dimension (timepoints dim)
-
         timepoints_encodings = []
-        for i, timepoint in enumerate(timepoints):              # 70 timepoints encoded (one out of two)
-            timepoint = timepoint.permute(0, 3, 1, 2)           # ([batch_size, 48, 64, 64]) batch, frames, height, width
-            timepoint = timepoint.unsqueeze(1)                  # Add channel dimension ([batch_size, 1, 48, 64, 64])
-            encoding = self.encoder(timepoint)                  # Encode each timepoint with 3D-ViT                  
-            timepoints_encodings.append(encoding)               
 
-        vector_encodings = torch.stack(timepoints_encodings, dim=1) # shape (batch_size, 70, 1024)
+        # Process timepoints in batches
+        for i in range(0, len(timepoints), self.timepoint_batch_size):
+            batch_timepoints = timepoints[i:i + self.timepoint_batch_size]
+            batch_encodings = []
+            
+            # Process each timepoint in the current batch
+            for timepoint in batch_timepoints:
+                timepoint = timepoint.permute(0, 3, 1, 2)           # ([batch_size, 48, 64, 64]) batch, frames, height, width
+                timepoint = timepoint.unsqueeze(1)                  # Add channel dimension ([batch_size, 1, 48, 64, 64])
+                
+                with torch.no_grad():
+                    encoding = self.encoder(timepoint)              # Encode each timepoint with 3D-ViT   
+                    encoding = encoding.detach().cpu()              # Move encoding to CPU to release VRAM
+                batch_encodings.append(encoding)
+            
+            # Add batch encodings to total encodings
+            timepoints_encodings.extend(batch_encodings)
+            
+        vector_encodings = torch.stack(timepoints_encodings, dim=1) # shape (batch_size, 140, 1024)  
+        vector_encodings = vector_encodings.to(self.device)         # Move encodings to device
         return vector_encodings
 
 class ProjectionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.projection = nn.Linear(70, 1) # Map 70 timepoint encodings to a single vector
+        self.device = config["device"]
+        
+        # First average across timepoints to get (batch_size, 1024)
+        # Then project to 4 classes
+        self.projection = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(512, 4)  # 4 classes: EMCI, CN, LMCI, AD
+        ).to(self.device)
 
     def forward(self, x):
-        # x is a tensor of shape (batch_size, 70, 1024)
-        permuted_x = x.permute(0, 2, 1)             # shape (batch_size, 1024, 70)
-        encodings = self.projection(permuted_x)     # shape (batch_size, 1024, 1)
-        encodings = encodings.squeeze()             # shape (batch_size, 1024)
-
-        return encodings
+        # x is a tensor of shape (batch_size, 140, 1024)
+        # Average across timepoints
+        x = torch.mean(x, dim=1)  # shape (batch_size, 1024)
+        
+        # Project to 4 classes
+        logits = self.projection(x)  # shape (batch_size, 4)
+        return logits

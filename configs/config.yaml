@@ -1,17 +1,20 @@
 # Global
-output_dir: './results'
+cuda_device: 1
+wandb_enabled: 1
 training_enabled: 1
-wandb_enabled: 0
-cuda_device: 2
+
+# Data paths
+output_dir: './results'
 dataset_path: './src/data/adni_metadata.pkl'
 mini_dataset_path: './src/data/adni_metadata_mini.pkl'
-csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/paths_ADNI_fMRI_MRI.csv'
+csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/ADNI_fMRI_sMRI_paths.csv'
 
 # Training
-seed: 42
+seed: 42                  # Not used ??
+epochs: 3
+batch_size: 32             
+timepoint_batch_size: 20  # Number of timepoints to process at once
 learning_rate: 0.0001
-epochs: 1
-batch_size: 2             # Test with 32
-# weight_decay: 0.1
-log_interval: 25           ## Log training loss every 25 batches
-projection_dim: 1024
+
+log_interval: 2           # Log training loss every 25 batches
+projection_dim: 1024      # Not used ??

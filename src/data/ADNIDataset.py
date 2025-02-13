@@ -16,9 +16,10 @@ class ADNIDataset(Dataset):
         self.batch_size = config['batch_size']
         self.csv_path = config['csv_path']
         self.dataset_path = config['dataset_path'] if not mini else config['mini_dataset_path']
+        self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD']
         
         # Load data using memory mapping
-        # self.data = self.get_data()
+        self.data = self.get_data()
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
@@ -28,13 +29,14 @@ class ADNIDataset(Dataset):
     
     def get_data(self):
         # Load CSV file
-        df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Group', 'Sex', 'Age_x'])
+        df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Group', 'Sex', 'Age'])
+        df = df[df['Group'].isin(self.selected_groups)]
         print(f"Found {len(df)} entries in CSV")
 
         # Create list and store data samples
         samples = []
         for row in tqdm(df.itertuples(), total=len(df)):
-            subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age_x
+            subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age
 
             # Verify fMRI is 64x64x48x140
             try:
@@ -69,13 +71,12 @@ class ADNIDataset(Dataset):
         try:
             fmri_img = load_img(fmri_path)
             fmri_data = fmri_img.get_fdata(dtype=np.float32)
-            fmri_data = fmri_data[:, :, :, ::2]                         # Select every 2nd timepoint
-            fmri_tensor = torch.tensor(fmri_data, dtype=torch.float32)  # (64, 64, 48, 70) shape
+            # fmri_data = fmri_data[:, :, :, ::2]                       # Select every 2nd timepoint
+            fmri_tensor = torch.tensor(fmri_data, dtype=torch.float32)  # (64, 64, 48, 140) shape
 
             # One-hot encode categorical variables using PyTorch
-            group_classes = ['CN', 'AD', 'EMCI', 'LMCI', 'MCI', 'SMC', 'Patient']
-            group_index = group_classes.index(group)    
-            group_encoded = F.one_hot(torch.tensor(group_index), num_classes=len(group_classes))
+            group_index = self.selected_groups.index(group)    
+            group_encoded = F.one_hot(torch.tensor(group_index), num_classes=len(self.selected_groups))
 
             sex_classes = ['F', 'M']
             sex_index = sex_classes.index(sex)

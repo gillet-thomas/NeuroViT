@@ -21,7 +21,7 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     name = args[0] if len(args) > 0 else None
     wandb_mode = 'online' if config["wandb_enabled"] else 'disabled'
-    wandb.init(project="CLIP_MIMIC_CXR", mode=wandb_mode, config=config, name=name)
+    wandb.init(project="fMRI2Vec", mode=wandb_mode, config=config, name=name)
 
     if config['training_enabled']:
         dataset_train = ADNIDataset(config, mode="train", mini=False)
@@ -29,4 +29,11 @@ if __name__ == "__main__":
         model = fmriEncoder(config)
         trainer = Trainer(config, model, dataset_train, dataset_val)
         trainer.run()
+    else:
+        print("Training is disabled. Inference mode enabled.")
+        dataset_val = ADNIDataset(config, mode="val", mini=False)
+        model = fmriEncoder(config)
+        model.load_state_dict(torch.load('./results/model.pth', map_location=device, weights_only=True))
+        trainer = Trainer(config, model, dataset_val, dataset_val)
+        trainer.evaluate_samples(dataset_val)
         

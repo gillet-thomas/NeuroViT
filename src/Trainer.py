@@ -1,7 +1,7 @@
 import wandb
 import torch
-from tqdm import tqdm
 import torch.nn as nn
+from tqdm import tqdm
 
 class Trainer():
     def __init__(self, config, model, dataset_train, dataset_val):
@@ -14,8 +14,8 @@ class Trainer():
 
         self.epochs = config['epochs']
         self.batch_size = config['batch_size']
-        self.dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=True)
-        self.val_dataloader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False)
+        self.dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=True, num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2)
+        self.val_dataloader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False, num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2)
 
         total_params = sum(p.numel() for p in self.model.parameters())
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
@@ -56,10 +56,10 @@ class Trainer():
                 wandb.log({"epoch": epoch, "batch": i, "train loss": running_loss/log_interval})
                 running_loss = 0.0
 
-
     def validate(self, epoch):
         self.model.eval()
         val_loss = 0.0
+        correct = 0
 
         with torch.no_grad():
             for i, (subject, fmri, group, age, sex) in enumerate(self.val_dataloader):
@@ -67,7 +67,34 @@ class Trainer():
                 outputs = self.model(fmri)
                 loss = self.criterion(outputs, group.argmax(dim=1))
                 val_loss += loss.item()
-            
+                correct += (outputs.argmax(dim=1) == group.argmax(dim=1)).sum().item()
+                
+            print(correct, len(self.val_dataloader))
             avg_val_loss = val_loss / len(self.val_dataloader)
-            print(f"VALIDATION - Epoch {epoch}, Total batch {i}, avg validation loss {avg_val_loss}")
-            wandb.log({"epoch": epoch, "val loss": avg_val_loss})
+            print(f"VALIDATION - Epoch {epoch}, Total batch {i}, avg validation loss {avg_val_loss}, accuracy {correct/len(self.val_dataloader)}")
+            wandb.log({"epoch": epoch, "val loss": avg_val_loss, "val accuracy": correct/len(self.val_dataloader)})
+    
+    def evaluate_samples(self, num_samples=10):
+        self.model.eval()  # Set model to evaluation mode
+        
+        with torch.no_grad():
+            # Get a batch of validation data
+            for subject, fmri, group, age, sex in self.val_dataloader:
+                fmri = fmri.to(self.device)
+                predictions = self.model(fmri)  # Get model predictions
+
+                # Convert one-hot encoded group back to class labels
+                # actual_labels = [self.data.selected_groups[g.argmax().item()] for g in group]
+
+                print("Predictions: ", predictions.argmax(dim=1))
+                # print("Len group classes: ", len(self.data.selected_groups))
+                # predicted_labels = [self.data.selected_groups[idx.item()] for idx in predictions.argmax(dim=1)]
+
+                # Print results for num_samples
+                print("\nEvaluation Results:")
+                print("=" * 50)
+                for i in range(num_samples):
+                    print(f"\nSample {i+1}:")
+                    # print(f"Subject ID: {subject[i]}")
+                    # print(f"Actual Group: {self.data.selected_groups[group[i].argmax().item()]}")
+                    # print(f"Predicted Group: {predicted_labels[i]}")
