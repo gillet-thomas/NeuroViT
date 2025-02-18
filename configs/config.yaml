@@ -5,16 +5,13 @@ training_enabled: 1
 
 # Data paths
 output_dir: './results'
-dataset_path: './src/data/adni_metadata.pkl'
-mini_dataset_path: './src/data/adni_metadata_mini.pkl'
+dataset_path: './src/data/adni_timepoints.pkl'
+mini_dataset_path: './src/data/adni_timepoints_mini.pkl'
 csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/ADNI_fMRI_sMRI_paths.csv'
 
 # Training
 seed: 42                  # Not used ??
-epochs: 3
-batch_size: 32             
-timepoint_batch_size: 20  # Number of timepoints to process at once
-learning_rate: 0.0001
-
-log_interval: 2           # Log training loss every 25 batches
-projection_dim: 1024      # Not used ??
+epochs: 5
+batch_size: 64             
+learning_rate: 0.0003
+log_interval: 25           # Log training loss every 25 batches

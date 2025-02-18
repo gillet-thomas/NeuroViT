@@ -24,8 +24,8 @@ if __name__ == "__main__":
     wandb.init(project="fMRI2Vec", mode=wandb_mode, config=config, name=name)
 
     if config['training_enabled']:
-        dataset_train = ADNIDataset(config, mode="train", mini=False)
-        dataset_val = ADNIDataset(config, mode="val", mini=False)
+        dataset_train = ADNIDataset(config, mode="train")
+        dataset_val = ADNIDataset(config, mode="val")
         model = fmriEncoder(config)
         trainer = Trainer(config, model, dataset_train, dataset_val)
         trainer.run()

@@ -19,7 +19,7 @@ class ADNIDataset(Dataset):
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD']
         
         # Load data using memory mapping
-        self.data = self.get_data()
+        # self.data = self.get_data()
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
@@ -45,20 +45,23 @@ class ADNIDataset(Dataset):
                 if fmri_data.shape != (64, 64, 48, 140):
                     print(f"Error: Expected height and width to be 64x64, got {fmri_data.shape[0]}x{fmri_data.shape[1]} for subject {subject}")
                     continue
+                
+                # Add each timepoint as dataset entry
+                for timepoint in range(fmri_data.shape[-1]):
+                    samples.append((subject, timepoint, fmri_path, group, sex, age))
 
-                samples.append((subject, fmri_path, group, sex, age))
             except Exception as e:
                 print(f"Error processing subject {subject}: {e}")
             
         print(f"Processed {len(samples)} samples successfully")
         
         # Save to pickle file
-        dataset_path = './src/data/adni_metadata.pkl'
+        dataset_path = './src/data/adni_timepoints.pkl'
         pickle.dump(samples, open(dataset_path, 'wb'))
         print(f"Saved dataset to {dataset_path}")
 
         # Save first 10 samples to mini path
-        mini_dataset_path = './src/data/adni_metadata_mini.pkl'
+        mini_dataset_path = './src/data/adni_timepoints_mini.pkl'
         samples = samples[:10]
         pickle.dump(samples, open(mini_dataset_path, 'wb'))
         print(f"Saved dataset to {mini_dataset_path}")
@@ -66,14 +69,14 @@ class ADNIDataset(Dataset):
         return samples
     
     def __getitem__(self, idx):
-        subject, fmri_path, group, sex, age = self.data[idx]    # Types are str, torch.Tensor, str, str, int
+        subject, timepoint, fmri_path, group, sex, age = self.data[idx]    # Types are str, torch.Tensor, str, str, int
         
         try:
             fmri_img = load_img(fmri_path)
             fmri_data = fmri_img.get_fdata(dtype=np.float32)
-            # fmri_data = fmri_data[:, :, :, ::2]                       # Select every 2nd timepoint
-            fmri_tensor = torch.tensor(fmri_data, dtype=torch.float32)  # (64, 64, 48, 140) shape
-
+            fmri_data = fmri_data[:, :, :, timepoint]                  # Select timepoint
+            mri_tensor = torch.tensor(fmri_data, dtype=torch.float32)  # (64, 64, 48) shape
+            mri_tensor = (mri_tensor - mri_tensor.mean()) / mri_tensor.std() # Normalize
             # One-hot encode categorical variables using PyTorch
             group_index = self.selected_groups.index(group)    
             group_encoded = F.one_hot(torch.tensor(group_index), num_classes=len(self.selected_groups))
@@ -84,7 +87,7 @@ class ADNIDataset(Dataset):
 
             age = torch.tensor(age)
 
-            return subject, fmri_tensor, group_encoded, sex_encoded, age
+            return subject, timepoint, mri_tensor, group_encoded, sex_encoded, age
         
         except Exception as e:
             print(f"Error loading fMRI for subject {subject}: {e}")
