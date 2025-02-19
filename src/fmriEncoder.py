@@ -10,8 +10,8 @@ class fmriEncoder(nn.Module):
         self.device = config["device"]
         self.to(self.device)  # Move entire model to device at once
 
-        self.encoder = ViT3DEncoder(config)
-        self.projection = ProjectionHead(config)
+        self.encoder = ViT3DEncoder(config)         # All parameters are trainable
+        self.projection = ProjectionHead(config)    # All parameters are trainable
 
     def forward(self, x):
         x = x.to(self.device)  # Ensure input is on correct device

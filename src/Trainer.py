@@ -4,6 +4,7 @@ import torch.nn as nn
 from tqdm import tqdm
 import os
 import datetime
+import pickle
 
 class Trainer():
     def __init__(self, config, model, dataset_train, dataset_val):
@@ -16,8 +17,9 @@ class Trainer():
 
         self.epochs = config['epochs']
         self.batch_size = config['batch_size']
-        self.dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=True, num_workers=8, pin_memory=True, prefetch_factor=2)
-        self.val_dataloader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False, num_workers=8, pin_memory=True, prefetch_factor=2)
+        self.num_workers = config['num_workers']
+        self.dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=True, prefetch_factor=2)
+        self.val_dataloader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=True, prefetch_factor=2)
 
         total_params = sum(p.numel() for p in self.model.parameters())
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
@@ -42,7 +44,7 @@ class Trainer():
         running_loss, correct, total = 0.0, 0, 0
 
         log_interval = self.config['log_interval']
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'], weight_decay=self.config['weight_decay'])
 
         for i, (subject, timepoint, mri, group, age, sex) in enumerate(self.dataloader):
             mri, group = mri.to(self.device), group.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
@@ -82,27 +84,47 @@ class Trainer():
             print(f"VALIDATION - Epoch {epoch}, Total batch {i}, avg validation loss {avg_val_loss}, val accuracy {accuracy}")
             wandb.log({"epoch": epoch, "val loss": avg_val_loss, "val accuracy": accuracy})
     
-    def evaluate_samples(self, num_samples=10):
+    def evaluate_samples(self):
         self.model.eval()  # Set model to evaluation mode
-        
+        print("=" * 50)
+        print(f"Training set has {len(self.data)} samples and validation set has {len(self.val_data)} samples.")
+        print("Training loader has", len(self.dataloader), "batches and validation loader has", len(self.val_dataloader), "batches.")
+
+        # Count number of unique subjects in training set
+        with open(self.data.dataset_train_path, 'rb') as f: train_data = pickle.load(f)  # 69720 samples
+        print(len(train_data))
+        unique_train_subjects = list(set([sample[0] for sample in train_data]))           # 172 unique subjects
+        print(f"Unique training subjects: {unique_train_subjects}")
+
+        with open(self.val_data.dataset_val_path, 'rb') as f: val_data = pickle.load(f)  # 17780 samples
+        print(len(val_data))
+        unique_val_subjects = list(set([sample[0] for sample in val_data]))               # 44 unique subjects
+        print(f"Unique validation subjects: {unique_val_subjects}")
+
+        common = list(set(unique_train_subjects) & set(unique_val_subjects))
+        print(f"Common subjects: {common}")
+
+        # Create evaluation dataset and dataloader
+        evaluation_data = self.val_data
+        # evaluation_data = torch.utils.data.Subset(self.val_data, range(100))
+        evaluation_dataloader = torch.utils.data.DataLoader(evaluation_data, batch_size=1, shuffle=False, num_workers=self.num_workers, pin_memory=True, prefetch_factor=2)
+
+        accuracy, duplicates = 0, 0
         with torch.no_grad():
-            # Get a batch of validation data
-            for subject, timepoint, mri, group, age, sex in self.val_dataloader:
+            for i, (subject, timepoint, mri, group, age, sex) in tqdm(enumerate(evaluation_dataloader), total=len(evaluation_dataloader)):
+                subject = subject[0]
                 mri = mri.to(self.device)
-                predictions = self.model(mri)  # Get model predictions
+                predictions = self.model(mri)  # Get model predictions (batch_size, 4)
 
-                # Convert one-hot encoded group back to class labels
-                # actual_labels = [self.data.selected_groups[g.argmax().item()] for g in group]
+                prediction = predictions.argmax(dim=1).item()
+                actual = group.argmax(dim=1).item()
+                # print(f"Predictions of {i}: {self.data.selected_groups[prediction]}/{self.data.selected_groups[actual]}")
 
-                print("Predictions: ", predictions.argmax(dim=1))
-                # print("Len group classes: ", len(self.data.selected_groups))
-                # predicted_labels = [self.data.selected_groups[idx.item()] for idx in predictions.argmax(dim=1)]
+                if subject in unique_train_subjects:
+                    duplicates += 1
+                    # print(f"Duplicate subject found: {subject}")
 
-                # Print results for num_samples
-                print("\nEvaluation Results:")
-                print("=" * 50)
-                for i in range(num_samples):
-                    print(f"\nSample {i+1}:")
-                    # print(f"Subject ID: {subject[i]}")
-                    # print(f"Actual Group: {self.data.selected_groups[group[i].argmax().item()]}")
-                    # print(f"Predicted Group: {predicted_labels[i]}")
+                accuracy += prediction == actual
+
+        print(f"Accuracy: {accuracy/len(evaluation_dataloader)}%")
+        print(f"Duplicates: {duplicates/len(evaluation_dataloader)}%")

@@ -10,64 +10,73 @@ from torch.utils.data import Dataset
 from torch.nn import functional as F
 
 class ADNIDataset(Dataset):
-    def __init__(self, config, mode='train', mini=False):
+    def __init__(self, config, mode='train'):
         self.mode = mode
         self.config = config
         self.batch_size = config['batch_size']
         self.csv_path = config['csv_path']
-        self.dataset_path = config['dataset_path'] if not mini else config['mini_dataset_path']
+        self.dataset_train_path = config['dataset_train_path']
+        self.dataset_val_path = config['dataset_val_path']
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD']
         
-        # Load data using memory mapping
-        # self.data = self.get_data()
-        with open(self.dataset_path, 'rb') as f:
-            self.data = pickle.load(f)
+        # self.data = self.generate_data()
+        # self.train_data, self.val_data = torch.utils.data.random_split(self.data, [0.80, 0.20])
+        with open(self.dataset_train_path, 'rb') as f: train_data = pickle.load(f)  # 69720 samples
+        with open(self.dataset_val_path, 'rb') as f: val_data = pickle.load(f)      # 17780 samples
 
-        self.train_data, self.val_data = torch.utils.data.random_split(self.data, [0.80, 0.20])
-        self.data = self.train_data if mode == 'train' else self.val_data
-        print(f"{self.dataset_path} initialized: {len(self.data)} {mode} samples/{len(self.data)} total")
-    
-    def get_data(self):
+        self.data = train_data if mode == 'train' else val_data
+        print(f"Dataset initialized: {len(self.data)} {mode} samples")
+        
+    def generate_data(self):
         # Load CSV file
         df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Group', 'Sex', 'Age'])
-        df = df[df['Group'].isin(self.selected_groups)]
-        print(f"Found {len(df)} entries in CSV")
+        df = df[df['Group'].isin(self.selected_groups)]  # Filter out unwanted groups
+        dataset = list(df.itertuples(index=False))  
 
-        # Create list and store data samples
-        samples = []
-        for row in tqdm(df.itertuples(), total=len(df)):
+        # Split into training and validation sets
+        train_samples, val_samples = [], []
+        train_data, val_data = torch.utils.data.random_split(dataset, [0.90, 0.10])
+        print(f"Training set has {len(train_data)} samples and validation set has {len(val_data)} samples.")
+
+        # Process training data
+        for row in tqdm(train_data, total=len(train_data)):
             subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age
+            samples = self.process_subject_data(subject, fmri_path, group, sex, age)
+            train_samples.extend(samples)
+        
+        # Process validation data
+        for row in tqdm(val_data, total=len(val_data)):
+            subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age
+            samples = self.process_subject_data(subject, fmri_path, group, sex, age)
+            val_samples.extend(samples)
+        
+        print(f"Processed {len(train_samples)} train samples successfully")
+        print(f"Processed {len(val_samples)} test samples successfully")
+        
+        # Save to pickle files
+        pickle.dump(train_samples, open(self.dataset_train_path, 'wb'))
+        pickle.dump(val_samples, open(self.dataset_val_path, 'wb'))
+        print("Datasets saved!")
 
-            # Verify fMRI is 64x64x48x140
-            try:
-                fmri_img = load_img(fmri_path)
-                fmri_data = fmri_img.get_fdata()
-                if fmri_data.shape != (64, 64, 48, 140):
-                    print(f"Error: Expected height and width to be 64x64, got {fmri_data.shape[0]}x{fmri_data.shape[1]} for subject {subject}")
-                    continue
-                
-                # Add each timepoint as dataset entry
-                for timepoint in range(fmri_data.shape[-1]):
-                    samples.append((subject, timepoint, fmri_path, group, sex, age))
-
-            except Exception as e:
-                print(f"Error processing subject {subject}: {e}")
+    def process_subject_data(self, subject, fmri_path, group, sex, age):
+        """Process a single subject's fMRI data and return samples."""
+        samples = []
+        try:
+            fmri_img = load_img(fmri_path)
+            fmri_data = fmri_img.get_fdata()
             
-        print(f"Processed {len(samples)} samples successfully")
-        
-        # Save to pickle file
-        dataset_path = './src/data/adni_timepoints.pkl'
-        pickle.dump(samples, open(dataset_path, 'wb'))
-        print(f"Saved dataset to {dataset_path}")
-
-        # Save first 10 samples to mini path
-        mini_dataset_path = './src/data/adni_timepoints_mini.pkl'
-        samples = samples[:10]
-        pickle.dump(samples, open(mini_dataset_path, 'wb'))
-        print(f"Saved dataset to {mini_dataset_path}")
-        
+            if fmri_data.shape != (64, 64, 48, 140):
+                print(f"Error: Expected (64,64,48,140), got {fmri_data.shape} for subject {subject}")
+                return samples
+                
+            for timepoint in range(fmri_data.shape[-1]):
+                samples.append((subject, timepoint, fmri_path, group, sex, age))
+                
+        except Exception as e:
+            print(f"Error processing subject {subject}: {e}")
+            
         return samples
-    
+
     def __getitem__(self, idx):
         subject, timepoint, fmri_path, group, sex, age = self.data[idx]    # Types are str, torch.Tensor, str, str, int
         
