@@ -46,7 +46,6 @@ class ViT3DEncoder(nn.Module):
         timepoint = timepoint.permute(0, 3, 1, 2)           # ([batch_size, 48, 64, 64]) batch, frames, height, width
         timepoint = timepoint.unsqueeze(1)                  # Add channel dimension ([batch_size, 1, 48, 64, 64])
         encoding = self.encoder(timepoint)                  # Encode each timepoint with 3D-ViT   
-        # encoding = encoding.detach().cpu()                # Move encoding to CPU to release VRAM
 
         return encoding
     

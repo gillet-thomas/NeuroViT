@@ -12,10 +12,9 @@ from src.Trainer import Trainer
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train or Evaluate fMRI Model")
-    parser.add_argument("name", type=str, nargs="?", default=None, help="WandB run name (optional)")
-    parser.add_argument('--inference', action='store_true', help='Run in inference mode')
-
-    parser.add_argument('--cuda', type=int, default=2, help='CUDA device to use (e.g., 0 for GPU 0)')
+    parser.add_argument("name", type=str, nargs="?", default=None, help="WandB run name (optional)")        # Optional
+    parser.add_argument('--inference', action='store_true', help='Run in inference mode')                   # Training mode is default
+    parser.add_argument('--cuda', type=int, default=2, help='CUDA device to use (e.g., 0 for GPU 0)')       # Cuda 2 is default
     parser.add_argument('--wandb', type=lambda x: (str(x).lower() == 'true'), default=True, help='Enable Weights and Biases (WandB) tracking (default: True)')
 
     args = parser.parse_args()
@@ -49,8 +48,9 @@ def main():
     # Parse arguments and load config
     args = parse_args()
     config = get_config(args)
+    print(f"Running on device: {config['device']}")
 
-    if args.training:
+    if args.inference is False:
         print("Training mode enabled.")
         initialize_wandb(config, args.name)
         set_seeds(config)
@@ -67,10 +67,4 @@ def main():
         trainer.evaluate_samples()  
         
 if __name__ == "__main__":
-    args = parse_args()
-    print(f"Arguments: {args}")
-    config = get_config(args)
-    # Print name, device and wandb_enabled
-    print(f"Device: {config['device']}")
-    print(f"WandB Enabled: {config['wandb_enabled']}")
-    # main()
+    main()

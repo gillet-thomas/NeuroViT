@@ -4,11 +4,10 @@ dataset_train_path: './src/data/adni_timepoints_train.pkl'
 dataset_val_path: './src/data/adni_timepoints_val.pkl'
 csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/ADNI_fMRI_sMRI_paths.csv'
 
-# Training☑
-seed: 42                  # Not used ??
-epochs: 3
-batch_size: 64           # 128 is max for A100 GPU
-num_workers: 16            # Number of workers for data loading
-learning_rate: 0.0001
-weight_decay: 0.01       # Default on AdamW is 0.01
-log_interval: 25           # Log training loss every 25 batches
+# Training
+seed: 42
+epochs: 10
+batch_size: 128            # 128 is max for A100 GPU
+num_workers: 16           # Number of workers for data loading
+learning_rate: 0.0003
+weight_decay: 0.01        # Default on AdamW is 0.01

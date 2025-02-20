@@ -15,47 +15,65 @@ class ADNIDataset(Dataset):
         self.config = config
         self.batch_size = config['batch_size']
         self.csv_path = config['csv_path']
-        self.dataset_train_path = config['dataset_train_path']
-        self.dataset_val_path = config['dataset_val_path']
+        self.dataset_path = config['dataset_train_path'] if mode == 'train' else config['dataset_val_path']
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD']
         
-        # self.data = self.generate_data()
-        # self.train_data, self.val_data = torch.utils.data.random_split(self.data, [0.80, 0.20])
-        with open(self.dataset_train_path, 'rb') as f: train_data = pickle.load(f)  # 69720 samples
-        with open(self.dataset_val_path, 'rb') as f: val_data = pickle.load(f)      # 17780 samples
-
-        self.data = train_data if mode == 'train' else val_data
+        # self.data = self.generate_data(config['dataset_train_path'], config['dataset_val_path'])
+        with open(self.dataset_path, 'rb') as f:
+            self.data = pickle.load(f)  # 78820 train samples and 8680 val sample
+        
         print(f"Dataset initialized: {len(self.data)} {mode} samples")
         
-    def generate_data(self):
+    def generate_data(self, train_path, val_path):
         # Load CSV file
         df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Group', 'Sex', 'Age'])
         df = df[df['Group'].isin(self.selected_groups)]  # Filter out unwanted groups
-        dataset = list(df.itertuples(index=False))  
+        
+        # Get unique subjects and their counts
+        unique_subjects = df['Subject'].unique()
+        n_subjects = len(unique_subjects)
+        print(f"Total unique subjects: {n_subjects}")       # 178
+        
+        # Randomly shuffle and split subjects
+        shuffled_subjects = np.random.permutation(unique_subjects)
+        train_size = int(0.9 * n_subjects)
+        train_subjects = shuffled_subjects[:train_size]
+        val_subjects = shuffled_subjects[train_size:]
+        
+        print(f"Training subjects: {len(train_subjects)}")  # 160
+        print(f"Validation subjects: {len(val_subjects)}")  # 18
+        
+        # Split dataframe based on subjects
+        train_df = df[df['Subject'].isin(train_subjects)] 
+        val_df = df[df['Subject'].isin(val_subjects)]
+        
+        print(f"Training rows: {len(train_df)}")            # 572
+        print(f"Validation rows: {len(val_df)}")            # 63
 
-        # Split into training and validation sets
         train_samples, val_samples = [], []
-        train_data, val_data = torch.utils.data.random_split(dataset, [0.90, 0.10])
-        print(f"Training set has {len(train_data)} samples and validation set has {len(val_data)} samples.")
 
-        # Process training data
-        for row in tqdm(train_data, total=len(train_data)):
+         # Process training data
+        print("Processing training data...")
+        for row in tqdm(train_df.itertuples(index=False), total=len(train_df)):
             subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age
             samples = self.process_subject_data(subject, fmri_path, group, sex, age)
             train_samples.extend(samples)
         
         # Process validation data
-        for row in tqdm(val_data, total=len(val_data)):
+        print("Processing validation data...")
+        for row in tqdm(val_df.itertuples(index=False), total=len(val_df)):
             subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age
             samples = self.process_subject_data(subject, fmri_path, group, sex, age)
             val_samples.extend(samples)
         
-        print(f"Processed {len(train_samples)} train samples successfully")
-        print(f"Processed {len(val_samples)} test samples successfully")
+        print(f"Processed {len(train_samples)} train samples")          # 78820
+        print(f"Processed {len(val_samples)} validation samples")       # 8680
         
         # Save to pickle files
-        pickle.dump(train_samples, open(self.dataset_train_path, 'wb'))
-        pickle.dump(val_samples, open(self.dataset_val_path, 'wb'))
+        with open(train_path, 'wb') as f:
+            pickle.dump(train_samples, f)
+        with open(val_path, 'wb') as f:
+            pickle.dump(val_samples, f)
         print("Datasets saved!")
 
     def process_subject_data(self, subject, fmri_path, group, sex, age):
