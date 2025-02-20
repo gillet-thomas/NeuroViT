@@ -2,39 +2,75 @@ import sys
 import yaml
 import wandb
 import torch
+import argparse
 import warnings
+import numpy as np
 
 from src.data.ADNIDataset import ADNIDataset
 from src.fmriEncoder import fmriEncoder
 from src.Trainer import Trainer
 
-if __name__ == "__main__":
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train or Evaluate fMRI Model")
+    parser.add_argument("name", type=str, nargs="?", default=None, help="WandB run name (optional)")
+    parser.add_argument('--inference', action='store_true', help='Run in inference mode')
+
+    parser.add_argument('--cuda', type=int, default=2, help='CUDA device to use (e.g., 0 for GPU 0)')
+    parser.add_argument('--wandb', type=lambda x: (str(x).lower() == 'true'), default=True, help='Enable Weights and Biases (WandB) tracking (default: True)')
+
+    args = parser.parse_args()
+    return args
+
+def get_device(cuda_device):
+    return f'cuda:{cuda_device}' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available else 'cpu'
+
+def get_config(args):
+    config = yaml.safe_load(open("./configs/config.yaml"))
+    config["device"] = get_device(args.cuda)
+    config["wandb_enabled"] = args.wandb
+    return config
+
+def initialize_wandb(config, run_name=None):
+    wandb_mode = 'online' if config["wandb_enabled"] else 'disabled'
+    wandb.init(project="fMRI2Vec", mode=wandb_mode, config=config, name=run_name)
+
+def set_seeds(config):
+    torch.manual_seed(config["seed"])
+    np.random.seed(config["seed"])
+
+def get_datasets(config):
+    dataset_train = ADNIDataset(config, mode="train")
+    dataset_val = ADNIDataset(config, mode="val")
+    return dataset_train, dataset_val
+
+def main():
     warnings.simplefilter(action='ignore', category=FutureWarning)
 
-    config = yaml.safe_load(open("./configs/config.yaml"))
-    device = f'cuda:{config["cuda_device"]}' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available else 'cpu'
-    config["device"] = device
-    print(f"Device: {device}")
+    # Parse arguments and load config
+    args = parse_args()
+    config = get_config(args)
 
-    # Initialize wandb
-    args = sys.argv[1:]
-    name = args[0] if len(args) > 0 else None
-    wandb_mode = 'online' if config["wandb_enabled"] else 'disabled'
-    wandb.init(project="fMRI2Vec", mode=wandb_mode, config=config, name=name)
-
-    if config['training_enabled']:
-        torch.manual_seed(config["seed"])
-        dataset_train = ADNIDataset(config, mode="train")
-        dataset_val = ADNIDataset(config, mode="val")
+    if args.training:
+        print("Training mode enabled.")
+        initialize_wandb(config, args.name)
+        set_seeds(config)
+        dataset_train, dataset_val = get_datasets(config)
         model = fmriEncoder(config)
         trainer = Trainer(config, model, dataset_train, dataset_val)
         trainer.run()
     else:
-        print("Training is disabled. Inference mode enabled.")
-        dataset_train = ADNIDataset(config, mode="train")
-        dataset_val = ADNIDataset(config, mode="val")
+        print("Training is disabled. Inference only.")
+        dataset_train, dataset_val = get_datasets(config)
         model = fmriEncoder(config)
-        model.load_state_dict(torch.load('./results/2025-02-19_08-46-01/model-e4.pth', map_location=device, weights_only=True))
+        model.load_state_dict(torch.load('./results/2025-02-19_16-18-01/model-e9.pth', map_location=config["device"], weights_only=True))
         trainer = Trainer(config, model, dataset_train, dataset_val)
-        trainer.evaluate_samples()
+        trainer.evaluate_samples()  
         
+if __name__ == "__main__":
+    args = parse_args()
+    print(f"Arguments: {args}")
+    config = get_config(args)
+    # Print name, device and wandb_enabled
+    print(f"Device: {config['device']}")
+    print(f"WandB Enabled: {config['wandb_enabled']}")
+    # main()

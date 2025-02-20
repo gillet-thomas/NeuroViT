@@ -1,8 +1,3 @@
-# Global
-cuda_device: 2
-wandb_enabled: 0
-training_enabled: 0
-
 # Data paths
 output_dir: './results'
 dataset_train_path: './src/data/adni_timepoints_train.pkl'
@@ -11,9 +6,9 @@ csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/ADNI_fMRI_sMRI_paths.csv'
 
 # Training☑
 seed: 42                  # Not used ??
-epochs: 5
-batch_size: 128           # 128 is max for A100 GPU
+epochs: 3
+batch_size: 64           # 128 is max for A100 GPU
 num_workers: 16            # Number of workers for data loading
-learning_rate: 0.0003
-weight_decay: 0.2       # Default on AdamW is 0.01
+learning_rate: 0.0001
+weight_decay: 0.01       # Default on AdamW is 0.01
 log_interval: 25           # Log training loss every 25 batches
