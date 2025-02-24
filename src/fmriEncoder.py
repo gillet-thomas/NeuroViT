@@ -25,6 +25,8 @@ class ViT3DEncoder(nn.Module):
         super().__init__()
 
         self.device = config["device"]
+        self.dropout = config["dropout"]
+
         self.encoder = ViT(
             frames = 48,               # number of frames (fmri slices)
             image_size = 64,           # image size (64x64)
@@ -36,8 +38,8 @@ class ViT3DEncoder(nn.Module):
             depth = 6,
             heads = 8,
             mlp_dim = 2048,
-            dropout = 0.1,
-            emb_dropout = 0.1
+            dropout = self.dropout,
+            emb_dropout = self.dropout
         ).to(self.device)
     
     def forward(self, x):
@@ -53,13 +55,22 @@ class ProjectionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.device = config["device"]
+        self.dropout = config["dropout"]
         
         # First average across timepoints to get (batch_size, 1024)
         # Then project to 4 classes
         self.projection = nn.Sequential(
             nn.Linear(1024, 512),
             nn.ReLU(),
-            nn.Dropout(0.1),
+            nn.Dropout(self.dropout),
+            nn.Linear(512, 4)  # 4 classes: EMCI, CN, LMCI, AD
+        ).to(self.device)
+
+        self.projection2 = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
             nn.Linear(512, 4)  # 4 classes: EMCI, CN, LMCI, AD
         ).to(self.device)
 

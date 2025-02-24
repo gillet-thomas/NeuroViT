@@ -23,6 +23,7 @@ class Trainer():
         self.scaler = torch.cuda.amp.GradScaler()       # for Automatic Mixed Precision
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'], weight_decay=self.config['weight_decay'])
+        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', verbose=True)
         self.log_interval = len(self.dataloader) // 10  # Log every 10% of batches
 
         total_params = sum(p.numel() for p in self.model.parameters())
@@ -109,7 +110,7 @@ class Trainer():
         # Create evaluation dataset and dataloader
         evaluation_data = self.val_data
         # evaluation_data = torch.utils.data.Subset(self.val_data, range(100))
-        evaluation_dataloader = torch.utils.data.DataLoader(evaluation_data, batch_size=1, shuffle=False, num_workers=self.num_workers, pin_memory=True, prefetch_factor=2)
+        evaluation_dataloader = torch.utils.data.DataLoader(evaluation_data, batch_size=1, shuffle=False, num_workers=self.num_workers)
 
         accuracy, duplicates = 0, 0
         with torch.no_grad():
