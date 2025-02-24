@@ -38,6 +38,7 @@ class Trainer():
         path = f"./results/{timestamp}"
         os.mkdir(path)
 
+        print(f"Running on device: {self.device}")
         for epoch in tqdm(range(self.epochs)):
             self.train(epoch)
             self.validate(epoch)
