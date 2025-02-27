@@ -7,14 +7,13 @@ class fmriEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.encoder = ViT3DEncoder(config)         # All parameters are trainable
+        self.projection = ProjectionHead(config)    # All parameters are trainable
+        
         self.device = config["device"]
         self.to(self.device)  # Move entire model to device at once
 
-        self.encoder = ViT3DEncoder(config)         # All parameters are trainable
-        self.projection = ProjectionHead(config)    # All parameters are trainable
-
     def forward(self, x):
-        x = x.to(self.device)  # Ensure input is on correct device
         timepoints_encodings = self.encoder(x) # Output is batch_size, 1024
         timepoints_encodings = self.projection(timepoints_encodings) # 32, 1024 linear to 32, 4
         return timepoints_encodings
@@ -74,7 +73,15 @@ class ProjectionHead(nn.Module):
             nn.Linear(512, 4)  # 4 classes: EMCI, CN, LMCI, AD
         ).to(self.device)
 
+        self.projection3 = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.LayerNorm(512),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(512, 4)  # 4 classes: EMCI, CN, LMCI, AD
+        ).to(self.device) 
+
     def forward(self, x):
         # x is a tensor of shape (batch_size, 1024)
-        logits = self.projection(x)  # shape (batch_size, 4)
+        logits = self.projection3(x)  # shape (batch_size, 4)
         return logits

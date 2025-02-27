@@ -3,7 +3,7 @@ method: bayes     # search method
 
 metric:
   goal: minimize
-  name: validation_loss
+  name: val_loss # metric to optimize
 
 parameters:
   seed:

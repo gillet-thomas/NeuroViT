@@ -24,6 +24,7 @@ class Trainer():
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'], weight_decay=self.config['weight_decay'])
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', verbose=True)
+        # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=10, eta_min=0)
         self.log_interval = len(self.dataloader) // 10  # Log every 10% of batches
 
         total_params = sum(p.numel() for p in self.model.parameters())
@@ -42,6 +43,8 @@ class Trainer():
         for epoch in tqdm(range(self.epochs)):
             self.train(epoch)
             self.validate(epoch)
+            # self.scheduler.step(self.val_loss)
+
             torch.save(self.model.state_dict(), f'{path}/model-e{epoch}.pth')
             print(f"MODEL SAVED to .{path}/model-e{epoch}.pth")
     
@@ -54,6 +57,7 @@ class Trainer():
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 outputs = self.model(mri)  # output is [batch_size, 4]
                 loss = self.criterion(outputs, group.argmax(dim=1))
+                self.val_loss = loss
             
             self.optimizer.zero_grad(set_to_none=True) # Modestly improve performance
             self.scaler.scale(loss).backward()
@@ -68,8 +72,8 @@ class Trainer():
                 avg_loss = round(running_loss / self.log_interval, 5)
                 accuracy = round(correct / total, 5)
                 lr = round(self.optimizer.param_groups[0]['lr'], 5)
-                print(f"epoch {epoch}\t| batch {i}/{len(self.dataloader)}\t| train loss: {avg_loss}\t| train accuracy: {accuracy}\t| learning rate: {lr}")
-                wandb.log({"epoch": epoch, "batch": i, "train loss": avg_loss, "train accuracy": accuracy, "learning rate": lr})
+                print(f"epoch {epoch}\t| batch {i}/{len(self.dataloader)}\t| train_loss: {avg_loss}\t| train_accuracy: {accuracy}\t| learning_rate: {lr}")
+                wandb.log({"epoch": epoch, "batch": i, "train_loss": avg_loss, "train_accuracy": accuracy, "learning_rate": lr})
                 correct, total, running_loss = 0, 0, 0.0
 
     def validate(self, epoch):
@@ -87,8 +91,8 @@ class Trainer():
                 
             avg_val_loss = val_loss / len(self.val_dataloader)
             accuracy = correct / total
-            print(f"[VALIDATION] epoch {epoch}\t| total batch {i}\t| val loss {avg_val_loss:.5f}\t| val accuracy {accuracy:.5f}")
-            wandb.log({"epoch": epoch, "val loss": round(avg_val_loss, 5), "val accuracy": round(accuracy, 5)})
+            print(f"[VALIDATION] epoch {epoch}\t| total_batch {i}\t| val_loss {avg_val_loss:.5f}\t| val_accuracy {accuracy:.5f}")
+            wandb.log({"epoch": epoch, "val_loss": round(avg_val_loss, 5), "val_accuracy": round(accuracy, 5)})
     
     def evaluate_samples(self):
         self.model.eval()  # Set model to evaluation mode
