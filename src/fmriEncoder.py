@@ -27,11 +27,11 @@ class ViT3DEncoder(nn.Module):
         self.dropout = config["dropout"]
 
         self.encoder = ViT(
-            frames = 48,               # number of frames (fmri slices)
-            image_size = 64,           # image size (64x64)
+            frames = 91,               # number of frames (fmri slices)
+            image_size = 91,           # image size (64x64)
             channels = 1,              # number of channels (one channel for each fmri slice)
             frame_patch_size = 1,      # number of frames processed at once
-            image_patch_size = 16,     # size of 2D patches extracted from each frame (common for ViT models)
+            image_patch_size = 13,     # size of 2D patches extracted from each frame (common for ViT models)
             num_classes = 1024,        # embedding dimension
             dim = 1024,
             depth = 6,
