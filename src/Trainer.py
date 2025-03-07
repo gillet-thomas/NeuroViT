@@ -57,26 +57,22 @@ class Trainer():
         total_time = 0  # Initialize total time
 
         for i, (subject, timepoint, mri, gender, age, age_group) in enumerate(self.dataloader):
-            start_time = time.time()  # Start timer for this iteration
+            # start_time = time.time()  # Start timer for this iteration
             
-            mri, age_group = mri.to(self.device), age_group.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
+            mri, gender = mri.to(self.device), gender.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 outputs = self.model(mri)  # output is [batch_size, 4]
-                loss = self.criterion(outputs, age_group.argmax(dim=1))
+                loss = self.criterion(outputs, gender)
                 self.val_loss = loss
             
-            end_time = time.time()  # End timer for this iteration
-            total_time += end_time - start_time  # Accumulate time for this iteration
-
-            print(f"Total time for training step: {total_time:.2f} seconds")  # Print total time
             self.optimizer.zero_grad(set_to_none=True) # Modestly improve performance
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
             self.scaler.update()
 
             running_loss += loss.item()
-            correct += (outputs.argmax(dim=1) == age_group.argmax(dim=1)).sum().item()
-            total += age_group.size(0)  # returns the batch size
+            correct += (outputs.argmax(dim=1) == gender).sum().item()
+            total += gender.size(0)  # returns the batch size
 
             if i != 0 and i % self.log_interval == 0:
                 avg_loss = round(running_loss / self.log_interval, 5)
@@ -85,6 +81,9 @@ class Trainer():
                 print(f"epoch {epoch}\t| batch {i}/{len(self.dataloader)}\t| train_loss: {avg_loss}\t| train_accuracy: {accuracy}\t| learning_rate: {lr}")
                 wandb.log({"epoch": epoch, "batch": i, "train_loss": avg_loss, "train_accuracy": accuracy, "learning_rate": lr})
                 correct, total, running_loss = 0, 0, 0.0
+            # end_time = time.time()  # End timer for this iteration
+            # total_time = end_time - start_time  # Accumulate time for this iteration
+            # print(f"Total time for training step: {total_time:.2f} seconds")  # Print total time
 
     def validate(self, epoch):
         self.model.eval()
@@ -92,12 +91,12 @@ class Trainer():
 
         with torch.no_grad():
             for i, (subject, timepoint, mri, gender, age, age_group) in enumerate(self.val_dataloader):
-                mri, age_group = mri.to(self.device), age_group.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
+                mri, gender = mri.to(self.device), gender.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
                 outputs = self.model(mri)
-                loss = self.criterion(outputs, age_group.argmax(dim=1))
+                loss = self.criterion(outputs, gender)
                 val_loss += loss.item()
-                correct += (outputs.argmax(dim=1) == age_group.argmax(dim=1)).sum().item()
-                total += age_group.size(0)  # returns the batch size
+                correct += (outputs.argmax(dim=1) == gender).sum().item()
+                total += gender.size(0)  # returns the batch size
                 
             avg_val_loss = val_loss / len(self.val_dataloader)
             accuracy = correct / total
@@ -129,13 +128,13 @@ class Trainer():
 
         accuracy, duplicates = 0, 0
         with torch.no_grad():
-            for i, (subject, timepoint, mri, group, age, sex) in tqdm(enumerate(evaluation_dataloader), total=len(evaluation_dataloader)):
+            for i, (subject, timepoint, mri, gender, age, age_group) in tqdm(enumerate(evaluation_dataloader), total=len(evaluation_dataloader)):
                 subject = subject[0]
                 mri = mri.to(self.device)
                 predictions = self.model(mri)  # Get model predictions (batch_size, 4)
 
                 prediction = predictions.argmax(dim=1).item()
-                actual = group.argmax(dim=1).item()
+                actual = gender.item()
                 # print(f"Predictions of {i}: {self.data.selected_groups[prediction]}/{self.data.selected_groups[actual]}")
 
                 if subject in unique_train_subjects:

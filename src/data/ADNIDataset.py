@@ -187,22 +187,25 @@ class ADNIDataset(Dataset):
             fmri_data = fmri_img.get_fdata(dtype=np.float32)
             fmri_data = fmri_data[:, :, :, timepoint]                  # Select timepoint
             mri_tensor = torch.tensor(fmri_data, dtype=torch.float32)  # (91, 109, 91) shape
-
             # mri_tensor_expanded = mri_tensor.unsqueeze(0)  # Now shape becomes (1, 91, 109, 91)
             # mri_tensor = F.interpolate(mri_tensor_expanded, size=(91, 91), mode='nearest').squeeze(0)  # Remove the temporary channel dimension
-            mri_tensor = mri_tensor[:, 9:-9, :]
-
+            mri_tensor = mri_tensor[1:, 10:-9, :]  # ([90, 90, 91])
             mri_tensor = (mri_tensor - mri_tensor.mean()) / mri_tensor.std() # Normalize
-            # One-hot encode categorical variables using PyTorch
-            gender_list = ['M', 'F']   
-            gender_index = gender_list.index(gender)
-            gender_encoded = F.one_hot(torch.tensor(gender_index), num_classes=len(gender_list))
+
+            # Encode gender
+            gender_encoded = torch.tensor(0 if gender == 'F' else 1)
+            # gender_list = ['M', 'F']   
+            # gender_index = gender_list.index(gender)
+            # gender_encoded = F.one_hot(torch.tensor(gender_index), num_classes=len(gender_list))
 
             age = torch.tensor(age)
 
-            age_list = [1, 2]
-            age_index = age_list.index(age_group)
-            age_encoded = F.one_hot(torch.tensor(age_index), num_classes=len(age_list))
+            age_encoded = torch.tensor(age_group - 1)  # Convert 1, 2 to 0, 1
+
+            # age_list = [1, 2]
+            # age_list = torch.tensor(age_list)
+            # age_index = age_list.index(age_group)
+            # age_encoded = F.one_hot(torch.tensor(age_index), num_classes=len(age_list))
 
             return subject, timepoint, mri_tensor, gender_encoded, age, age_encoded
         
