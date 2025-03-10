@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Module",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "main"
+        },
+        {
+            "name": "Python Debugger: Python File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "justMyCode": true
+        },
+        {
+            "name": "Python Debugger: GradCAM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/CLIP_fmris/fMRI2Vec/gradcam.py",
+            "justMyCode": true
+        }
+    ]
+}
