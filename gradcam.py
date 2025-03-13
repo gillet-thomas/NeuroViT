@@ -42,21 +42,22 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
     # target_layers = [model.encoder.vit3d.transformer.layers[-2][1].net[0]]  # Last norm layer before the last attention layer, output (1, 2)
     # target_layers = [model.resnet_video.resnet_blocks[4].res_blocks[0].branch2.conv_a]  # Last norm layer before the last attention layer, output (1, 2)
-    target_layers = [model.resnet_3d.resnet.layer4[-1].conv3] 
+    target_layers = [model.resnet_3d.resnet.layer4] 
     cam = GradCAM(model=model, target_layers=target_layers)
 
     # Load and Preprocess fMRI Data
     fmri_img = load_img(FMRI_PATH)
     fmri_data = fmri_img.get_fdata(dtype=np.float32)                # Shape: (91, 109, 91, 146)
-    fmri_data = fmri_data[1:, 10:-9, : , 70]                        # CROP Shape: (90, 90, 91)
-    fmri_norm = (fmri_data - fmri_data.min()) / (fmri_data.max() - fmri_data.min())
+    fmri_data = fmri_data[1:, 10:-9, 1: , 70]                        # CROP Shape: (90, 90, 91)
+    fmri_norm = (fmri_data - np.mean(fmri_data)) / np.std(fmri_data)  # Normalize
     input_tensor = torch.tensor(fmri_norm).to(config["device"])
     input_tensor = input_tensor.unsqueeze(0).unsqueeze(0)          # Shape (1, 91, 90, 90)
 
     # Save fMRI image for visualization
     fmri_slice = fmri_norm[:, :, 45]  # Choose middle slice
     fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)
-    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), BASE_PATH + 'gradcam/fmri.nii')
+    fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
+    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), BASE_PATH + 'vit/fmri.nii')
 
     # Set targets and compute CAM
     target = model(input_tensor).argmax(dim=1)
@@ -65,10 +66,10 @@ if __name__ == '__main__':
 
     # Save CAM Nifti Image
     grayscale_cam = grayscale_cam[0, :]    # Shape: (1, 90, 91, 90) -> (90, 91, 90)
-    nib.save(nib.Nifti1Image(grayscale_cam, fmri_img.affine), BASE_PATH + 'gradcam/gradcam3.nii')
+    nib.save(nib.Nifti1Image(grayscale_cam, fmri_img.affine), BASE_PATH + 'vit/gradcam.nii')
     grayscale_cam = grayscale_cam[ :, :, 45]   # Shape: (90, 90)
 
     # Overlay CAM on fMRI image
     cam_image = show_cam_on_image(fmri_rgb, grayscale_cam)
-    cv2.imwrite(BASE_PATH + 'gradcam/gradcam_resnet_3d.jpg', cam_image)
+    cv2.imwrite(BASE_PATH + 'vit/gradcam_gender.jpg', cam_image)
     print("GradCAM completed.")

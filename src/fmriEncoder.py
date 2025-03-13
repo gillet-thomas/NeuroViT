@@ -19,7 +19,7 @@ class fmriEncoder(nn.Module):
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 90, 90, 91)
-        timepoints_encodings = self.resnet_3d(x)   # Encode each timepoint with 3D-ViT
+        timepoints_encodings = self.encoder(x)   # Encode each timepoint with 3D-ViT
         timepoints_encodings = self.projection(timepoints_encodings) # batch, 1024 linear to batch, 2
         return timepoints_encodings
     
@@ -32,11 +32,11 @@ class ViT3DEncoder(nn.Module):
         self.dropout = config["dropout"]
 
         self.vit3d = ViT(
-            frames = 91,               # number of frames (fmri slices)
-            image_size = 90,           # image size (64x64)
+            frames = 90,               # number of frames (fmri slices)
+            image_size = 90,           # image size (90x90)
             channels = 1,              # number of channels (one channel for each fmri slice)
-            frame_patch_size = 1,      # number of frames processed at once
-            image_patch_size = 18,     # size of 2D patches extracted from each frame
+            frame_patch_size = 9,      # number of frames processed at once
+            image_patch_size = 9,     # size of 2D patches extracted from each frame
             num_classes = 1024,        # embedding dimension
             dim = 1024,
             depth = 6,

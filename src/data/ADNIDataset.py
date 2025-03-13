@@ -18,7 +18,7 @@ class ADNIDataset(Dataset):
         self.batch_size = config['batch_size']
         self.csv_path = config['csv_path']
         self.dataset_path = config['dataset_train_path'] if mode == 'train' else config['dataset_val_path']
-        self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD']
+        self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD'] # Not used on marian's dataset
         
         # self.data = self.generate_data(config['dataset_train_path'], config['dataset_val_path'])
         # self.generate_folds('./src/data/')
@@ -29,7 +29,7 @@ class ADNIDataset(Dataset):
         
     def generate_data(self, train_path, val_path):
         # Load CSV file
-        df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Gender', 'Age', 'Age_Group'])
+        df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Gender', 'Age', 'Age_Group', 'Pain_Distraction_Group'])
         # df = df[df['Group'].isin(self.selected_groups)]  # Filter out unwanted groups
         
         # Get unique subjects and their counts
@@ -58,15 +58,15 @@ class ADNIDataset(Dataset):
          # Process training data
         print("Processing training data...")
         for row in tqdm(train_df.itertuples(index=False), total=len(train_df)):
-            subject, fmri_path, gender, age, age_group = row.Subject, row.Path_fMRI, row.Gender, row.Age, row.Age_Group
-            samples = self.process_subject_data(subject, fmri_path, gender, age, age_group)
+            subject, fmri_path, gender, age, age_group, pain_group = row.Subject, row.Path_fMRI, row.Gender, row.Age, row.Age_Group, row.Pain_Distraction_Group
+            samples = self.process_subject_data(subject, fmri_path, gender, age, age_group, pain_group)
             train_samples.extend(samples)
         
         # Process validation data
         print("Processing validation data...")
         for row in tqdm(val_df.itertuples(index=False), total=len(val_df)):
-            subject, fmri_path, gender, age, age_group = row.Subject, row.Path_fMRI, row.Gender, row.Age, row.Age_Group
-            samples = self.process_subject_data(subject, fmri_path, gender, age, age_group)
+            subject, fmri_path, gender, age, age_group, pain_group = row.Subject, row.Path_fMRI, row.Gender, row.Age, row.Age_Group, row.Pain_Distraction_Group
+            samples = self.process_subject_data(subject, fmri_path, gender, age, age_group, pain_group)
             val_samples.extend(samples)
         
         print(f"Processed {len(train_samples)} train samples")          # 78820
@@ -160,7 +160,7 @@ class ADNIDataset(Dataset):
         
         print("\nAll folds processed and saved successfully!")
     
-    def process_subject_data(self, subject, fmri_path, gender, age, age_group):
+    def process_subject_data(self, subject, fmri_path, gender, age, age_group, pain_group):
         """Process a single subject's fMRI data and return samples."""
         samples = []
         try:
@@ -172,7 +172,7 @@ class ADNIDataset(Dataset):
             #     return samples
                 
             for timepoint in range(fmri_data.shape[-1]):
-                samples.append((subject, timepoint, fmri_path, gender, age, age_group))
+                samples.append((subject, timepoint, fmri_path, gender, age, age_group, pain_group))
                 
         except Exception as e:
             print(f"Error processing subject {subject}: {e}")
@@ -180,7 +180,7 @@ class ADNIDataset(Dataset):
         return samples
 
     def __getitem__(self, idx):
-        subject, timepoint, fmri_path, gender, age, age_group = self.data[idx]    # Types are str, torch.Tensor, str, str, int
+        subject, timepoint, fmri_path, gender, age, age_group, pain_group = self.data[idx]    # Types are str, torch.Tensor, str, str, int
         
         try:
             fmri_img = load_img(fmri_path)
@@ -189,7 +189,7 @@ class ADNIDataset(Dataset):
             mri_tensor = torch.tensor(fmri_data, dtype=torch.float32)  # (91, 109, 91) shape
             # mri_tensor_expanded = mri_tensor.unsqueeze(0)  # Now shape becomes (1, 91, 109, 91)
             # mri_tensor = F.interpolate(mri_tensor_expanded, size=(91, 91), mode='nearest').squeeze(0)  # Remove the temporary channel dimension
-            mri_tensor = mri_tensor[1:, 10:-9, :]  # ([90, 90, 91])
+            mri_tensor = mri_tensor[1:, 10:-9, 1:]  # ([90, 90, 91])
             mri_tensor = (mri_tensor - mri_tensor.mean()) / mri_tensor.std() # Normalize
 
             # Encode gender
@@ -202,12 +202,14 @@ class ADNIDataset(Dataset):
 
             age_encoded = torch.tensor(age_group - 1)  # Convert 1, 2 to 0, 1
 
+            pain_group = torch.tensor(pain_group)
+
             # age_list = [1, 2]
             # age_list = torch.tensor(age_list)
             # age_index = age_list.index(age_group)
             # age_encoded = F.one_hot(torch.tensor(age_index), num_classes=len(age_list))
 
-            return subject, timepoint, mri_tensor, gender_encoded, age, age_encoded
+            return subject, timepoint, mri_tensor, gender_encoded, age, age_encoded, pain_group
         
         except Exception as e:
             print(f"Error loading fMRI for subject {subject}: {e}")

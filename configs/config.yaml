@@ -3,13 +3,17 @@ output_dir: './results'
 dataset_train_path: './src/data/fmri_timepoints_train.pkl'
 dataset_val_path: './src/data/fmri_timepoints_val.pkl'
 csv_path: './src/data/paths_csv.csv'
+csv_full: '/mnt/data/iai/datasets/fMRI_marian/behavioural_data.csv'
 
-best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-10_14-48-19/model-e10.pth'
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-12_09-39-55/model-e3.pth' # age group
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-12_09-11-56/model-e7.pth' # ViT pain group 18x18x1 patches
+best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-13_08-32-38/model-e9.pth' # ViT pain group 9x9x9 patches
+
 
 seed: 42
 epochs: 30
-batch_size: 32            # 128 is max for A100 GPU
+batch_size: 64            # 128 is max for A100 GPU
 num_workers: 16           # Number of workers for data loading
-learning_rate: 0.0001
+learning_rate: 0.00007
 weight_decay: 0.01        # Default on AdamW is 0.01
-dropout: 0.1
+dropout: 0.2
