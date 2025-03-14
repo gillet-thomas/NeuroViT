@@ -20,7 +20,7 @@ class ADNIDataset(Dataset):
         self.dataset_path = config['dataset_train_path'] if mode == 'train' else config['dataset_val_path']
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD'] # Not used on marian's dataset
         
-        # self.data = self.generate_data(config['dataset_train_path'], config['dataset_val_path'])
+        # self.generate_data(config['dataset_train_path'], config['dataset_val_path'])
         # self.generate_folds('./src/data/')
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)  # 78820 train samples and 8680 val sample
@@ -30,7 +30,6 @@ class ADNIDataset(Dataset):
     def generate_data(self, train_path, val_path):
         # Load CSV file
         df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Gender', 'Age', 'Age_Group', 'Pain_Distraction_Group'])
-        # df = df[df['Group'].isin(self.selected_groups)]  # Filter out unwanted groups
         
         # Get unique subjects and their counts
         unique_subjects = df['Subject'].unique()
@@ -81,8 +80,7 @@ class ADNIDataset(Dataset):
 
     def generate_folds(self, base_path):
         # Load CSV file
-        df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Group', 'Sex', 'Age'])
-        df = df[df['Group'].isin(self.selected_groups)]  # Filter out unwanted groups
+        df = pd.read_csv(self.csv_path, usecols=['Subject', 'Path_fMRI', 'Gender', 'Age', 'Age_Group', 'Pain_Distraction_Group'])
         
         # Get unique subjects and their counts
         unique_subjects = df['Subject'].unique()
@@ -129,15 +127,15 @@ class ADNIDataset(Dataset):
             # Process training data
             print("Processing training data...")
             for row in tqdm(train_df.itertuples(index=False), total=len(train_df)):
-                subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age
-                samples = self.process_subject_data(subject, fmri_path, group, sex, age)
+                subject, fmri_path, gender, age, age_group, pain_group = row.Subject, row.Path_fMRI, row.Gender, row.Age, row.Age_Group, row.Pain_Distraction_Group
+                samples = self.process_subject_data(subject, fmri_path, gender, age, age_group, pain_group)
                 train_samples.extend(samples)
             
             # Process validation data
             print("Processing validation data...")
             for row in tqdm(val_df.itertuples(index=False), total=len(val_df)):
-                subject, fmri_path, group, sex, age = row.Subject, row.Path_fMRI, row.Group, row.Sex, row.Age
-                samples = self.process_subject_data(subject, fmri_path, group, sex, age)
+                subject, fmri_path, gender, age, age_group, pain_group = row.Subject, row.Path_fMRI, row.Gender, row.Age, row.Age_Group, row.Pain_Distraction_Group
+                samples = self.process_subject_data(subject, fmri_path, gender, age, age_group, pain_group)
                 val_samples.extend(samples)
             
             print(f"Processed {len(train_samples)} train samples")

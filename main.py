@@ -62,27 +62,27 @@ def main():
     if not config["inference"] and not config["sweep"]:
         print("Training mode enabled.")
 
-        # for fold in range(3, 5):
-        #     print(f"FOLD {fold}/5 training...")
-        #     fold_id = fold + 1
-        #     config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
-        #     config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
+        for fold in range(0, 5):
+            print(f"FOLD {fold}/5 training...")
+            fold_id = fold + 1
+            config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
+            config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
 
-        wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
-        set_seeds(config)
-        dataset_train, dataset_val = get_datasets(config)
-        model = fmriEncoder(config)
-        trainer = Trainer(config, model, dataset_train, dataset_val)
-        trainer.run()
+            wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
+            set_seeds(config)
+            dataset_train, dataset_val = get_datasets(config)
+            model = fmriEncoder(config)
+            trainer = Trainer(config, model, dataset_train, dataset_val)
+            trainer.run()
 
-            # print(f"FOLD {fold}/5 completed.")
-            # print("=" * 50)
+            print(f"FOLD {fold}/5 completed.")
+            print("=" * 50)
 
     elif not config["inference"] and config["sweep"]:
         print("Sweep mode enabled.")
         sweep_config = yaml.safe_load(open("./configs/sweep.yaml"))     # Load sweep configuration
         sweep_id = wandb.sweep(sweep_config, project="fMRI2Vec_Sweep")  # Initialize sweep
-        wandb.agent(sweep_id, function=train_sweep, count=30)            # Start the sweep agent
+        wandb.agent(sweep_id, function=train_sweep, count=50)            # Start the sweep agent
 
     elif config["inference"] is True:
         print("Training is disabled. Inference only.")

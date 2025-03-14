@@ -36,7 +36,7 @@ class ViT3DEncoder(nn.Module):
             image_size = 90,           # image size (90x90)
             channels = 1,              # number of channels (one channel for each fmri slice)
             frame_patch_size = 9,      # number of frames processed at once
-            image_patch_size = 9,     # size of 2D patches extracted from each frame
+            image_patch_size = 9,      # size of 2D patches extracted from each frame
             num_classes = 1024,        # embedding dimension
             dim = 1024,
             depth = 6,

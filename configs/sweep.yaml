@@ -3,7 +3,7 @@ method: bayes     # search method
 
 metric:
   goal: minimize
-  name: val_accuracy # metric to optimize
+  name: val_loss # metric to optimize
 
 parameters:
   seed:
@@ -12,14 +12,14 @@ parameters:
     value: 16
   learning_rate:
     min: 0.00001
-    max: 0.0003
+    max: 0.01
   batch_size:
-    values: [64, 128]
+    values: [16, 32, 64, 128]
   epochs:
     values: [10]
   optimizer:
     values: ["AdamW"]
   dropout:
-    values: [0.1, 0.2, 0.3, 0.5]
+    values: [0.1, 0.2, 0.3, 0.5, 0.8]
   weight_decay:
-    values: [0.01, 0.001]
+    values: [0.1, 0.01, 0.001, 0.0001, 0.00001]
