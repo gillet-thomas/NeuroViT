@@ -57,7 +57,7 @@ if __name__ == '__main__':
     fmri_slice = fmri_norm[:, :, 45]  # Choose middle slice
     fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)
     fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
-    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), BASE_PATH + 'vit/fmri.nii')
+    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), BASE_PATH + 'xAi_captum/fmri.nii')
 
     # Set targets and compute CAM
     target = model(input_tensor).argmax(dim=1)
@@ -66,10 +66,10 @@ if __name__ == '__main__':
 
     # Save CAM Nifti Image
     grayscale_cam = grayscale_cam[0, :]    # Shape: (1, 90, 91, 90) -> (90, 91, 90)
-    nib.save(nib.Nifti1Image(grayscale_cam, fmri_img.affine), BASE_PATH + 'vit/gradcam.nii')
+    nib.save(nib.Nifti1Image(grayscale_cam, fmri_img.affine), BASE_PATH + 'xAi_captum/gradcam.nii')
     grayscale_cam = grayscale_cam[ :, :, 45]   # Shape: (90, 90)
 
     # Overlay CAM on fMRI image
     cam_image = show_cam_on_image(fmri_rgb, grayscale_cam)
-    cv2.imwrite(BASE_PATH + 'vit/gradcam_gender.jpg', cam_image)
+    cv2.imwrite(BASE_PATH + 'xAi_captum/gradcam_gender.jpg', cam_image)
     print("GradCAM completed.")

@@ -23,8 +23,8 @@ if __name__ == '__main__':
     # Load Model and GradCAM
     model = fmriEncoder(config).to(config["device"]).eval()
     model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
-    # target_layers = model.resnet_3d.resnet.layer4
-    target_layers = [model.encoder.vit3d.transformer.layers[-2][1].net[0]]
+    target_layers = model.resnet_3d.resnet.layer4[-1]
+    # target_layers = [model.encoder.vit3d.transformer.layers[-2][1].net[0]]
 
     # Load and Preprocess fMRI Data
     fmri_img = load_img(FMRI_PATH)
@@ -32,25 +32,24 @@ if __name__ == '__main__':
     fmri_data = fmri_data[1:, 10:-9, : , 70]                        # CROP Shape: (90, 90, 91)
     fmri_norm = (fmri_data - np.mean(fmri_data)) / np.std(fmri_data)  # Normalize
     input_tensor = torch.tensor(fmri_norm).to(config["device"])
-    input_tensor = input_tensor.unsqueeze(0)         # Shape (1, 91, 90, 90)
+    input_tensor = input_tensor.unsqueeze(0).unsqueeze(0)         # Shape (91, 90, 90)
 
     # Save fMRI image for visualization
     fmri_slice = fmri_norm[:, :, 45]  # Choose middle slice
     fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)
     fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
-    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), BASE_PATH + 'vit/LayerGradCam_fmri.nii')
+    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), BASE_PATH + 'xAi_captum/LayerGradCam_fmri.nii')
 
     # Set targets and compute CAM
     target = model(input_tensor).argmax(dim=1).item()
     layer_grad_cam = LayerGradCam(model, target_layers)
     attribution = layer_grad_cam.attribute(input_tensor, target=target) # attr ([1, 1, 6, 3, 3])
-    # upsampled_attr = LayerAttribution.interpolate(attr, (90, 90, 91))  # shape[2:] = (90, 90, 91)
+    # upsampled_attr = LayerAttribution.interpolate(attribution, (90, 90, 91))  # shape[2:] = (90, 90, 91)
     upsampled_attr = F.interpolate(attribution, size=input_tensor.shape[2:], mode="trilinear", align_corners=False) # Work better
-    print("Shape of upsampled_attr:", attribution.shape)
 
     # Save CAM Nifti Image
-    cam = upsampled_attr[0, 0, :].detach().cpu().numpy()    # Shape: (90, 91, 90)
-    nib.save(nib.Nifti1Image(cam, fmri_img.affine), BASE_PATH + 'vit/LayerGradCam_heatmap.nii')
+    cam = upsampled_attr[0, 0, :].detach().cpu().numpy()    # Shape: (90, 90, 91)
+    nib.save(nib.Nifti1Image(cam, fmri_img.affine), BASE_PATH + 'xAi_captum/LayerGradCam_heatmap.nii')
 
     slice_cam = cam[ :, :, 45]   # Shape: (90, 90)
     # Normalize slice_cam to 0-255 range for proper colormap application
@@ -67,5 +66,5 @@ if __name__ == '__main__':
     overlay = cv2.addWeighted(fmri_rgb, 0.5, heatmap, 0.5, 0)
 
     # Save the overlay image
-    cv2.imwrite(BASE_PATH + 'vit/LayerGradCam.jpg', overlay)
+    cv2.imwrite(BASE_PATH + 'xAi_captum/LayerGradCam.jpg', overlay)
     print("GradCAM overlay completed.")

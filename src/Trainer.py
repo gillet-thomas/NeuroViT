@@ -58,10 +58,10 @@ class Trainer():
         for i, (subject, timepoint, mri, gender, age, age_group, pain_group) in enumerate(self.dataloader):
             # start_time = time.time()  # Start timer for this iteration
             
-            mri, pain_group = mri.to(self.device), pain_group.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
+            mri, age_group = mri.to(self.device), age_group.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 outputs = self.model(mri)  # output is [batch_size, 4]
-                loss = self.criterion(outputs, pain_group)
+                loss = self.criterion(outputs, age_group)
                 self.val_loss = loss
             
             self.optimizer.zero_grad(set_to_none=True) # Modestly improve performance
@@ -70,8 +70,8 @@ class Trainer():
             self.scaler.update()
 
             running_loss += loss.item()
-            correct += (outputs.argmax(dim=1) == pain_group).sum().item()
-            total += pain_group.size(0)  # returns the batch size
+            correct += (outputs.argmax(dim=1) == age_group).sum().item()
+            total += age_group.size(0)  # returns the batch size
 
             if i != 0 and i % self.log_interval == 0:
                 avg_loss = round(running_loss / self.log_interval, 5)
@@ -90,12 +90,12 @@ class Trainer():
 
         with torch.no_grad():
             for i, (subject, timepoint, mri, gender, age, age_group, pain_group) in enumerate(self.val_dataloader):
-                mri, pain_group = mri.to(self.device), pain_group.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
+                mri, age_group = mri.to(self.device), age_group.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
                 outputs = self.model(mri)
-                loss = self.criterion(outputs, pain_group)
+                loss = self.criterion(outputs, age_group)
                 val_loss += loss.item()
-                correct += (outputs.argmax(dim=1) == pain_group).sum().item()
-                total += pain_group.size(0)  # returns the batch size
+                correct += (outputs.argmax(dim=1) == age_group).sum().item()
+                total += age_group.size(0)  # returns the batch size
                 
             avg_val_loss = val_loss / len(self.val_dataloader)
             accuracy = correct / total

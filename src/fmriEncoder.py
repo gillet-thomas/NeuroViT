@@ -19,7 +19,7 @@ class fmriEncoder(nn.Module):
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 90, 90, 91)
-        timepoints_encodings = self.encoder(x)   # Encode each timepoint with 3D-ViT
+        timepoints_encodings = self.resnet_3d(x)   # Encode each timepoint with 3D-ViT
         timepoints_encodings = self.projection(timepoints_encodings) # batch, 1024 linear to batch, 2
         return timepoints_encodings
     
@@ -61,7 +61,6 @@ class ResnetVideo(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.device = config["device"]
-
         self.resnet_video = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True).eval().to(self.device)
         self.resnet_blocks = self.resnet_video.blocks[:-1]
 
