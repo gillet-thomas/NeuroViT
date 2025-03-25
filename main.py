@@ -62,21 +62,21 @@ def main():
     if not config["inference"] and not config["sweep"]:
         print("Training mode enabled.")
 
-        # for fold in range(0, 5):
-        #     print(f"FOLD {fold}/5 training...")
-        #     fold_id = fold + 1
-        #     config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
-        #     config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
+        for fold in range(0, 5):
+            print(f"FOLD {fold}/5 training...")
+            fold_id = fold + 1
+            config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
+            config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
 
-        wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
-        set_seeds(config)
-        dataset_train, dataset_val = get_datasets(config)
-        model = fmriEncoder(config)
-        trainer = Trainer(config, model, dataset_train, dataset_val)
-        trainer.run()
+            wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
+            set_seeds(config)
+            dataset_train, dataset_val = get_datasets(config)
+            model = fmriEncoder(config)
+            trainer = Trainer(config, model, dataset_train, dataset_val)
+            trainer.run()
 
-            # print(f"FOLD {fold}/5 completed.")
-            # print("=" * 50)
+            print(f"FOLD {fold}/5 completed.")
+            print("=" * 50)
 
     elif not config["inference"] and config["sweep"]:
         print("Sweep mode enabled.")
@@ -94,3 +94,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # import pandas as pd
+    # csv = "/mnt/data/iai/datasets/fMRI_marian/behavioural_data.csv"
+    # df = pd.read_csv(csv)
+    # df["temperature"] = df["hot pain"] - df["cold pain"]
+    # temp_median = df["temperature"].median()
+    # df["temperature_sensitivity"] = np.where(df["temperature"] > temp_median, 0, 1) # 0 for high sensitivity, 1 for low sensitivity
+    # correlations = df.corr(method="pearson")
+    # correlations.to_excel("correlations_pearson.xlsx")
