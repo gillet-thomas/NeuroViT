@@ -45,7 +45,7 @@ def main(ID=151):
     # target_layers = [model.resnet_video.resnet_blocks[4].res_blocks[0].branch2.conv_a]  # Last norm layer before the last attention layer, output (1, 2)
     target_layers = [model.resnet_3d.resnet.layer4[-1]] 
     print(target_layers)
-    cam = GradCAM(model=model, target_layers=target_layers)
+    cam = LayerCAM(model=model, target_layers=target_layers)
 
     # Load and Preprocess fMRI Data
     fmri_img = load_img(FMRI_PATH)
@@ -77,7 +77,7 @@ def main(ID=151):
     print("Fmri RGB shape: ", fmri_rgb.shape, fmri_rgb.min(), fmri_rgb.max())
     cam_image = show_cam_on_image(fmri_rgb, grayscale_cam)
     # cv2.imwrite(f'{BASE_PATH}/xAi_gradcam/age/gradcam_age{ID}.jpg', cam_image)
-    cv2.imwrite(f'{BASE_PATH}/xAi_gradcam/age/gradcam_ageeeee.jpg', cam_image)
+    cv2.imwrite(f'{BASE_PATH}/xAi_gradcam/output.jpg', cam_image)
     print("GradCAM completed.")
 
 if __name__ == '__main__':

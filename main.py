@@ -6,6 +6,7 @@ import argparse
 import warnings
 import numpy as np
 from src.data.ADNIDataset import ADNIDataset
+from src.data.StructuralDataset import StructuralDataset
 from src.fmriEncoder import fmriEncoder
 from src.Trainer import Trainer
 
@@ -62,21 +63,21 @@ def main():
     if not config["inference"] and not config["sweep"]:
         print("Training mode enabled.")
 
-        for fold in range(0, 5):
-            print(f"FOLD {fold}/5 training...")
-            fold_id = fold + 1
-            config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
-            config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
+        # for fold in range(0, 5):
+        #     print(f"FOLD {fold}/5 training...")
+        #     fold_id = fold + 1
+        #     config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
+        #     config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
 
-            wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
-            set_seeds(config)
-            dataset_train, dataset_val = get_datasets(config)
-            model = fmriEncoder(config)
-            trainer = Trainer(config, model, dataset_train, dataset_val)
-            trainer.run()
+        wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
+        set_seeds(config)
+        dataset_train, dataset_val = get_datasets(config)
+        model = fmriEncoder(config)
+        trainer = Trainer(config, model, dataset_train, dataset_val)
+        trainer.run()
 
-            print(f"FOLD {fold}/5 completed.")
-            print("=" * 50)
+            # print(f"FOLD {fold}/5 completed.")
+            # print("=" * 50)
 
     elif not config["inference"] and config["sweep"]:
         print("Sweep mode enabled.")

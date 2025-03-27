@@ -27,7 +27,7 @@ def main(ID=151):
     model = fmriEncoder(config).to(config["device"]).eval()
     model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
     target_layers = [model.resnet_3d.resnet.layer4[-1]] 
-    cam = GradCAMElementWise(model=model, target_layers=target_layers)
+    cam = LayerCAM(model=model, target_layers=target_layers)
 
     # Load and Preprocess fMRI Data
     fmri_img = load_img(FMRI_PATH)
