@@ -3,6 +3,8 @@ import torch
 from vit_pytorch.vit_3d import ViT
 import torch.nn.functional as F
 from src.resnet3d import ResNet, generate_model
+import matplotlib.pyplot as plt
+import nibabel as nib
 
 class fmriEncoder(nn.Module):
     def __init__(self, config):
@@ -19,12 +21,166 @@ class fmriEncoder(nn.Module):
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 90, 90, 91)
-        timepoints_encodings = self.resnet_3d(x)   # Encode each timepoint with 3D-ViT
+        timepoints_encodings = self.encoder(x)   # Encode each timepoint with 3D-ViT
         timepoints_encodings = self.projection(timepoints_encodings) # batch, 1024 linear to batch, 2
         return timepoints_encodings
     
-
 class ViT3DEncoder(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.device = config["device"]
+        self.dropout = config["dropout"]
+
+        self.vit3d = ViT(
+            frames=90,
+            image_size=90,
+            channels=1,
+            frame_patch_size=9,
+            image_patch_size=9,
+            num_classes=1024,
+            dim=1024,
+            depth=6,
+            heads=8,
+            mlp_dim=2048,
+            dropout=self.dropout,
+            emb_dropout=self.dropout
+        ).to(self.device)
+
+        # More robust gradient and activation tracking
+        self.gradients = {}
+        self.activations = {}
+        
+        # Register hooks on all attention layers for more comprehensive tracking
+        self._register_hooks()
+
+    def _register_hooks(self):
+        """More robust hook registration across all attention layers"""
+        # Get the last attention layer
+        last_attention = self.vit3d.transformer.layers[-1][0].norm
+
+        def forward_hook(module, input, output):
+            self.activations = output.detach().cpu() # [1, 1001, 1024]
+        
+        def backward_hook(module, grad_input, grad_output):
+            self.gradients = grad_output[0].detach().cpu() # [1, 1001, 1024]
+        
+        # Register hooks
+        self.forward_handle = last_attention.register_forward_hook(forward_hook)
+        self.backward_handle = last_attention.register_backward_hook(backward_hook)
+
+    def forward(self, x):
+        """Forward pass with optional attention tracking"""
+        # Input preprocessing (same as before)
+        timepoint = x.to(self.device)
+        if len(x.shape) == 4:
+            timepoint = timepoint.permute(0, 3, 1, 2)
+            timepoint = timepoint.unsqueeze(1)
+        
+        encoding = self.vit3d(timepoint)
+        return encoding
+
+    def get_attention_map(self, x):
+
+        # Forward pass
+        output = self.forward(x)
+        
+        # Get target class
+        class_idx = output.argmax(dim=1)
+        print(f"Class index: {class_idx}")  
+        # Backward pass
+        one_hot = torch.zeros_like(output)
+        # one_hot.scatter_(1, class_idx.unsqueeze(1), 1)
+        one_hot[torch.arange(output.size(0)), class_idx] = 1  # Create one-hot vector for target class
+        output.backward(gradient=one_hot, retain_graph=True)  # Compute gradients for target class
+        
+        # Get gradients and activations from hooks
+        gradients = self.gradients  # [1, 1001, 1024]
+        activations = self.activations  # [1, 1001, 1024]
+        
+        # 1. Compute importance weights (global average pooling of gradients)
+        weights = gradients.mean(dim=2, keepdim=True)  # [1, 1001, 1]
+        
+        # 2. Weight activations by importance and sum all features
+        cam = (weights * activations).sum(dim=2)  # [1, 1001]
+        
+        # 3. Remove CLS token and process patches only
+        patch_cam = cam[:, 1:]  # [1, 1000]
+        
+        # 4. Reshape to 3D patch grid (10x10x10)
+        patch_cam = patch_cam.reshape(1, 10, 10, 10)
+        
+        # 5. Normalize patch_cam
+        patch_cam = F.relu(patch_cam)
+        patch_cam = (patch_cam - patch_cam.min()) / (patch_cam.max() - patch_cam.min())
+        
+        # 6. Upsample to original size
+        cam_3d = F.interpolate(
+            patch_cam.unsqueeze(0),  # [10, 10, 10]
+            size=(90, 90, 90),
+            mode='trilinear',
+            align_corners=False
+        ).squeeze()
+        
+        return cam_3d.detach().cpu().numpy()
+    
+    def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None, save_path='./gradcam_visualization.png'):
+        """Improved visualization with better error handling"""
+        if cam_3d is None:
+            print("Error: No CAM computed")
+            return
+        
+        # Process original volume
+        if torch.is_tensor(original_volume):
+            original = original_volume.squeeze().permute(2, 0, 1).detach().cpu().numpy()
+        else:
+            original = original_volume.squeeze()
+        
+        # Verify shapes
+        if original.ndim != 3 or cam_3d.ndim != 3:
+            print(f"Shape mismatch: original {original.shape}, CAM {cam_3d.shape}")
+            return
+        
+        # Default to middle slice
+        if slice_idx is None:
+            slice_idx = original.shape[slice_dim] // 2
+        slice_idx = max(0, min(slice_idx, original.shape[slice_dim] - 1))
+        
+        # Select slice
+        try:
+            if slice_dim == 0:  # Axial
+                img = original[slice_idx]
+                attn = cam_3d[slice_idx]
+            elif slice_dim == 1:  # Coronal
+                img = original[:, slice_idx]
+                attn = cam_3d[:, slice_idx]
+            else:  # Sagittal
+                img = original[:, :, slice_idx]
+                attn = cam_3d[:, :, slice_idx]
+        except IndexError:
+            print(f"Slice {slice_idx} out of bounds for dim {slice_dim}")
+            return
+        
+        # Create figure
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+        
+        # Original image
+        ax1.imshow(img, cmap='gray')
+        ax1.set_title('Original MRI')
+        ax1.axis('off')
+        
+        # Overlay
+        ax2.imshow(img, cmap='gray')
+        heatmap = ax2.imshow(attn, cmap='jet', alpha=0.4)
+        fig.colorbar(heatmap, ax=ax2, fraction=0.046, pad=0.04)
+        ax2.set_title('Grad-CAM Attention')
+        ax2.axis('off')
+        
+        plt.tight_layout()
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        plt.close(fig)
+        print(f"Visualization saved to {save_path}")
+        
+class ViT3DEncodere(nn.Module):
     def __init__(self, config):
         super().__init__()
 
@@ -45,7 +201,23 @@ class ViT3DEncoder(nn.Module):
             dropout = self.dropout,
             emb_dropout = self.dropout
         ).to(self.device)
+
+        self.gradients = None
+        self.activations = None
+        
+        # Hook the last attention layer
+        for layer in self.transformer.layers[-1][0].attend.modules():
+            if isinstance(layer, nn.Softmax):
+                layer.register_forward_hook(self.activation_hook)
+                layer.register_backward_hook(self.gradient_hook)
+
+
+    def activation_hook(self, module, input, output):
+        self.activations = output.detach()
     
+    def gradient_hook(self, module, grad_input, grad_output):
+        self.gradients = grad_output[0].detach()
+
     def forward(self, x):
         timepoint = x.to(self.device)
         
