@@ -50,7 +50,7 @@ class fmriEncoder(nn.Module):
         # Forward pass to get target class
         output = self.forward(x)
         class_idx = output.argmax(dim=1)
-        # class_idx = torch.tensor([0])
+        # class_idx = torch.tensor([1])
         print(f"Class index: {class_idx}")  
         
         # Create one-hot vector for target class
@@ -67,8 +67,8 @@ class fmriEncoder(nn.Module):
         # 1. Compute importance weights (global average pooling of gradients)
         # weights = gradients.mean(dim=2, keepdim=True)         # [1, 1001, 1]
         # weights = gradients.abs().mean(dim=2, keepdim=True)
-        # weights = gradients.max(dim=2, keepdim=True)[0] 
-        weights = F.relu(gradients).mean(dim=2, keepdim=True) 
+        weights = gradients.max(dim=2, keepdim=True)[0] 
+        # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
         cam = (weights * activations).sum(dim=2)  # [1, 1001, 1024] -> [1, 1001]
@@ -91,7 +91,7 @@ class fmriEncoder(nn.Module):
             align_corners=False
         ).squeeze()
         
-        return cam_3d.detach().cpu().numpy()
+        return cam_3d.detach().cpu().numpy(), class_idx
     
     def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None, save_path='./gradcam_visualization.png'):
         """Improved visualization with better error handling"""
@@ -146,8 +146,7 @@ class fmriEncoder(nn.Module):
         print(f"Visualization saved to {save_path}")
 
         return img, attn
-        
-    
+          
 class ViT3DEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()

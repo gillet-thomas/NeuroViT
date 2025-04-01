@@ -1,20 +1,15 @@
+import os
 import yaml
 import torch
 import warnings
 import numpy as np
 import nibabel as nib
 import matplotlib.pyplot as plt
+from datetime import datetime
+import xml.etree.ElementTree as ET
 from nilearn.image import load_img
 from src.fmriEncoder import fmriEncoder
 
-
-import os
-import xml.etree.ElementTree as ET
-from datetime import datetime
-
-import os
-import xml.etree.ElementTree as ET
-from datetime import datetime
 
 def create_itksnap_workspace(original_nifti, gradcam_nifti, output_dir):
     # Create the root element
@@ -113,7 +108,6 @@ def main(ID=151, slice_dim=0, slice_idx=45):
     # Load Model and GradCAM
     model = fmriEncoder(config).to(config["device"]).train()
     model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
-
     # Load and Preprocess fMRI Data
     fmri_img = load_img(FMRI_PATH)
     fmri_data = fmri_img.get_fdata(dtype=np.float32)                # Shape: (91, 109, 91, 146)
@@ -124,28 +118,29 @@ def main(ID=151, slice_dim=0, slice_idx=45):
 
     # Ensure model is in train mode
     model.eval()
-    attention_map = model.get_attention_map(input_tensor)       # [90, 90, 90]
+    attention_map, class_idx = model.get_attention_map(input_tensor)       # [90, 90, 90]
     img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=slice_dim, slice_idx=slice_idx)
-    nib.save(nib.Nifti1Image(attention_map, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/{ID}_gradcam_3dd.nii')
+    nib.save(nib.Nifti1Image(attention_map, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/gender/{ID}_gradcam_3dd.nii')
 
     # Save fMRI image for visualization
     fmri_slice = fmri_norm[ :, :, slice_idx]  # Choose middle slice
     fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)
     fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
-    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/{ID}_fmri.nii')
+    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/gender/{ID}_fmri.nii')
     print("GradCAM completed.")
 
     # Create ITK-SNAP workspace
-    create_itksnap_workspace(f'/Users/thomas.gillet/Downloads/{ID}_fmri.nii',
-                            f'/Users/thomas.gillet/Downloads/{ID}_gradcam_3dd.nii',
-                            f'{BASE_PATH}/explainability/xAi_gradcam3DViT/')
-    return ID, img, attn
+    # create_itksnap_workspace(f'/Users/thomas.gillet/Downloads/{ID}_fmri.nii',
+    #                         f'/Users/thomas.gillet/Downloads/{ID}_gradcam_3dd.nii',
+    #                         f'{BASE_PATH}/explainability/xAi_gradcam3DViT/')
+
+    return ID, img, attn, class_idx
 
 
 if __name__ == '__main__':
-    integers = [151]
+    ids = [151, 153, 154, 155, 501, 502, 503, 504, 505, 507, 508, 509, 510]
     results = []
-    for i in integers:
+    for i in ids:
         results.append(main(i))
         print(f"Completed {i}")
 
@@ -156,7 +151,7 @@ if __name__ == '__main__':
     fig, axes = plt.subplots(rows, cols, figsize=(20, 5*rows))
     fig.suptitle('GradCAM Results Across Subjects', fontsize=16)
     
-    for idx, (ID, image, attention) in enumerate(results):
+    for idx, (ID, image, attention, class_idx) in enumerate(results):
         row = idx // cols
         col = idx % cols
         
@@ -168,7 +163,7 @@ if __name__ == '__main__':
         ax.imshow(image, cmap='gray')
         heatmap = ax.imshow(attention, cmap='jet', alpha=0.4)
         fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
-        ax.set_title(f'Subject {ID}')
+        ax.set_title(f'Subject {ID} (Class {class_idx.item()})')
         ax.axis('off')
     
     # Hide empty subplots
@@ -181,6 +176,6 @@ if __name__ == '__main__':
             axes[row, col].axis('off')
 
     plt.tight_layout()
-    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/explainability/xAi_gradcam3DViT/{integers[0]}_vit4.png')
+    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/explainability/xAi_gradcam3DViT/gender/{ids[0]}_vit_gender.png')
     plt.close()
     print("All results saved in single plot.")
