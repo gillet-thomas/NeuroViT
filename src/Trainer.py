@@ -90,12 +90,12 @@ class Trainer():
 
         with torch.no_grad():
             for i, (subject, timepoint, mri, gender, age, age_group, pain_group) in enumerate(self.val_dataloader):
-                mri, age_group = mri.to(self.device), age_group.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
+                mri, gender = mri.to(self.device), gender.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
                 outputs = self.model(mri)
-                loss = self.criterion(outputs, age_group)
+                loss = self.criterion(outputs, gender)
                 val_loss += loss.item()
-                correct += (outputs.argmax(dim=1) == age_group).sum().item()
-                total += age_group.size(0)  # returns the batch size
+                correct += (outputs.argmax(dim=1) == gender).sum().item()
+                total += gender.size(0)  # returns the batch size
                 
             avg_val_loss = val_loss / len(self.val_dataloader)
             accuracy = correct / total
@@ -133,7 +133,7 @@ class Trainer():
                 predictions = self.model(mri)  # Get model predictions (batch_size, 4)
 
                 prediction = predictions.argmax(dim=1).item()
-                actual = age_group.item()
+                actual = gender.item()
                 # print(f"Predictions of {i}: {self.data.selected_groups[prediction]}/{self.data.selected_groups[actual]}")
 
                 if subject in unique_train_subjects:

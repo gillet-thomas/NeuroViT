@@ -1,10 +1,11 @@
-import torch.nn as nn
 import torch
-from vit_pytorch.vit_3d import ViT
+import torch.nn as nn
 import torch.nn.functional as F
-from src.resnet3d import ResNet, generate_model
 import matplotlib.pyplot as plt
-import nibabel as nib
+
+from vit_pytorch.vit_3d import ViT
+from src.resnet3d import ResNet, generate_model
+
 
 class fmriEncoder(nn.Module):
     def __init__(self, config):

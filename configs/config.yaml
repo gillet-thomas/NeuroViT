@@ -11,7 +11,6 @@ csv_full: '/mnt/data/iai/datasets/fMRI_marian/behavioural_data.csv'
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-20_10-50-08/model-e28.pth' # RESNET gender
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-26_08-41-52/model-e47.pth' # RESNET sMRI age group
 
-# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-18_09-36-06/model-e8.pth' # ViT age group
 best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-31_16-20-41/model-e8.pth' # ViT age group (new)
 
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-12_09-11-56/model-e7.pth' # ViT pain group 18x18x1 patches

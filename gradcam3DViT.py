@@ -1,34 +1,11 @@
-import cv2
 import yaml
 import torch
 import warnings
 import numpy as np
-import nibabel as nib
-from PIL import Image
-from nilearn.image import load_img
-import time
 import matplotlib.pyplot as plt
-
+from nilearn.image import load_img
 from src.fmriEncoder import fmriEncoder
-from pytorch_grad_cam import GradCAM, LayerCAM, GradCAMElementWise
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-
-def reshape_transform(tensor, depth=91, height=5, width=5):
-    print("Before reshape: ", tensor.shape) # ([1, 1001, 1024])
-
-    # Remove CLS token, reshape into (batch, depth, height, width, channels)
-    result = tensor[:, 1:, :].reshape(tensor.size(0), depth, height, width, tensor.size(2))  # [1, 90, height, width, 1024]
-    print("After reshape: ", result.shape)  # Expected: [1, 91, height, width, 1024]
-
-    # Bring the channels to the first dimension, like in CNNs
-    result = result[:, 45, :, :, :]  # [1, height, width, 1024]
-    result = result.permute(0, 3, 1, 2)  # [1, 1024, height, width]
-    
-    print(f"Shape after slicing: {result.shape}")
-
-    return result
 
 def main(ID=151, slice_dim=0, slice_idx=45):
     warnings.simplefilter(action='ignore', category=FutureWarning)
