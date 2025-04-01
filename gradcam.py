@@ -7,6 +7,7 @@ import nibabel as nib
 from PIL import Image
 from nilearn.image import load_img
 import time
+import matplotlib.pyplot as plt
 
 from src.fmriEncoder import fmriEncoder
 from pytorch_grad_cam import GradCAM, LayerCAM, GradCAMElementWise
@@ -29,7 +30,7 @@ def reshape_transform(tensor, depth=91, height=5, width=5):
 
     return result
 
-def main(ID=151):
+def main(ID=151, slice_dim=0, slice_idx=45):
     warnings.simplefilter(action='ignore', category=FutureWarning)
 
     # Load Config
@@ -41,10 +42,6 @@ def main(ID=151):
     # Load Model and GradCAM
     model = fmriEncoder(config).to(config["device"]).train()
     model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
-    # target_layers = [model.resnet_3d.resnet.layer4[-1]] 
-    target_layers = [model.encoder.vit3d.transformer.layers[-2][1].net[0]]  # Last norm layer before the last attention layer, output (1, 2)
-    # target_layers = [model.resnet_video.resnet_blocks[4].res_blocks[0].branch2.conv_a]  # Last norm layer before the last attention layer, output (1, 2)
-    # cam = LayerCAM(model=model, target_layers=target_layers, reshape_transform=reshape_transform)
 
     # Load and Preprocess fMRI Data
     fmri_img = load_img(FMRI_PATH)
@@ -54,51 +51,61 @@ def main(ID=151):
     input_tensor = torch.tensor(fmri_norm).to(config["device"])
     input_tensor = input_tensor.unsqueeze(0)          # Shape (1, 91, 90, 90)
 
-
     # Ensure model is in train mode
     model.eval()
-    attention_map = model.encoder.get_attention_map(input_tensor)       # [90, 90, 90]
+    attention_map = model.get_attention_map(input_tensor)       # [90, 90, 90]
+    img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=slice_dim, slice_idx=slice_idx)
     # nib.save(nib.Nifti1Image(attention_map, fmri_img.affine), f'{BASE_PATH}/gradcam_3dd.nii')
-    model.encoder.visualize_slice(attention_map, input_tensor, slice_dim=0, slice_idx=50)
-
-    # Visualize
-    # fig, attn_map = model.encoder.visualize_attention(input_tensor)
-    # fig.savefig(f'{BASE_PATH}/heyyy.png')
-    # print("Attention map saved.")
-
-    # # Or get the raw attention map for further processing
-    # attention_map = model.encoder.get_attention_map(input_tensor)
-    # attention_map.save(f'{BASE_PATH}/attention_map.png')
-    # print("Attention map saved.")
 
     # Save fMRI image for visualization
-    fmri_slice = fmri_norm[ :, :, 45]  # Choose middle slice
+    fmri_slice = fmri_norm[ :, :, slice_idx]  # Choose middle slice
     fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)
     fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
-    # nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/gradcam_fmri{ID}.nii')
-
-    # # Set targets and compute CAM
-    # target = model(input_tensor).argmax(dim=1)
-    # print(f"Target: {target.item()}")
-    # targets = [ClassifierOutputTarget(target)]
-    # grayscale_cam = cam(input_tensor=input_tensor, targets=targets)
-
-    # # Save CAM Nifti Image
-    # print("Grayscale CAM shape: ", grayscale_cam.shape) 
-    # grayscale_cam = grayscale_cam[0, :]    # Shape: (1, 90, 91, 90) -> (90, 91, 90)
-    # # nib.save(nib.Nifti1Image(grayscale_cam, fmri_img.affine), f'{BASE_PATH}/xAi_gradcam/age/gradcam_heatmap{ID}.nii')
-    # grayscale_cam = grayscale_cam[ :, :, 45]   # Shape: (90, 90)
-
-    # # Overlay CAM on fMRI image
-    # print("Fmri RGB shape: ", fmri_rgb.shape, fmri_rgb.min(), fmri_rgb.max())
-    # cam_image = show_cam_on_image(fmri_rgb, grayscale_cam)
-    # # cv2.imwrite(f'{BASE_PATH}/xAi_gradcam/age/gradcam_age{ID}.jpg', cam_image)
-    # cv2.imwrite(f'{BASE_PATH}/xAi_gradcam/output.jpg', cam_image)
+    # nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/gradcam_fmri.nii')
     print("GradCAM completed.")
+
+    return ID, img, attn
+
 
 if __name__ == '__main__':
     integers = [151, 153, 154, 155, 501, 502, 503, 504, 505, 507, 508, 509, 510]
+    results = []
     for i in integers:
-        main(i)
+        results.append(main(i))
         print(f"Completed {i}")
-        # time.sleep(1)
+
+    # Create combined plot
+    n = len(results)
+    cols = 4
+    rows = (n + cols - 1) // cols
+    fig, axes = plt.subplots(rows, cols, figsize=(20, 5*rows))
+    fig.suptitle('GradCAM Results Across Subjects', fontsize=16)
+    
+    for idx, (ID, image, attention) in enumerate(results):
+        row = idx // cols
+        col = idx % cols
+        
+        if rows == 1:
+            ax = axes[col]
+        else:
+            ax = axes[row, col]
+        
+        ax.imshow(image, cmap='gray')
+        heatmap = ax.imshow(attention, cmap='jet', alpha=0.4)
+        fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
+        ax.set_title(f'Subject {ID}')
+        ax.axis('off')
+    
+    # Hide empty subplots
+    for idx in range(n, rows*cols):
+        row = idx // cols
+        col = idx % cols
+        if rows == 1:
+            axes[col].axis('off')
+        else:
+            axes[row, col].axis('off')
+
+    plt.tight_layout()
+    plt.savefig('/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/vit4.png')
+    plt.close()
+    print("All results saved in single plot.")

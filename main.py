@@ -95,11 +95,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # import pandas as pd
-    # csv = "/mnt/data/iai/datasets/fMRI_marian/behavioural_data.csv"
-    # df = pd.read_csv(csv)
-    # df["temperature"] = df["hot pain"] - df["cold pain"]
-    # temp_median = df["temperature"].median()
-    # df["temperature_sensitivity"] = np.where(df["temperature"] > temp_median, 0, 1) # 0 for high sensitivity, 1 for low sensitivity
-    # correlations = df.corr(method="pearson")
-    # correlations.to_excel("correlations_pearson.xlsx")
