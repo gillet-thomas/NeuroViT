@@ -4,10 +4,11 @@ import torch
 import warnings
 import numpy as np
 import nibabel as nib
-import matplotlib.pyplot as plt
 from datetime import datetime
-import xml.etree.ElementTree as ET
+import matplotlib.pyplot as plt
 from nilearn.image import load_img
+
+import xml.etree.ElementTree as ET
 from src.fmriEncoder import fmriEncoder
 
 
@@ -106,30 +107,29 @@ def main(ID=151, slice_dim=0, slice_idx=45):
     config["device"] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Load Model and GradCAM
-    model = fmriEncoder(config).to(config["device"]).train()
+    model = fmriEncoder(config).to(config["device"]).eval()
     model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
+    
     # Load and Preprocess fMRI Data
-    fmri_img = load_img(FMRI_PATH)
-    fmri_data = fmri_img.get_fdata(dtype=np.float32)                # Shape: (91, 109, 91, 146)
-    fmri_data = fmri_data[1:, 10:-9, 1: , 70]                        # CROP Shape: (90, 90, 9)
-    fmri_norm = (fmri_data - np.mean(fmri_data)) / np.std(fmri_data)  # Normalize
-    input_tensor = torch.tensor(fmri_norm).to(config["device"])
-    input_tensor = input_tensor.unsqueeze(0)          # Shape (1, 91, 90, 90)
+    fmri_img = nib.load(FMRI_PATH)
+    fmri_data = fmri_img.dataobj[1:, 10:-9, 1: , 70]                        # Shape: (91, 109, 91, 146)
+    fmri_norm = (fmri_data - np.mean(fmri_data)) / np.std(fmri_data)        # Normalize
+    input_tensor = torch.tensor(fmri_norm).to(config["device"]).float()     # Convert to float
+    input_tensor = input_tensor.unsqueeze(0)                                # Shape (1, 90, 90, 90)
 
-    # Ensure model is in train mode
-    model.eval()
-    attention_map, class_idx = model.get_attention_map(input_tensor)       # [90, 90, 90]
+    # Get attention map
+    attention_map, class_idx = model.get_attention_map(input_tensor)        # output [90, 90, 90]
     img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=slice_dim, slice_idx=slice_idx)
     nib.save(nib.Nifti1Image(attention_map, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/gender/{ID}_gradcam_3dd.nii')
 
     # Save fMRI image for visualization
-    fmri_slice = fmri_norm[ :, :, slice_idx]  # Choose middle slice
-    fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)
+    fmri_slice = fmri_norm[ :, :, slice_idx]        # Choose middle slice, output shape: (90, 90)
+    fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)  # Convert to RGB, output shape: (90, 90, 3)
     fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
     nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/gender/{ID}_fmri.nii')
     print("GradCAM completed.")
 
-    # Create ITK-SNAP workspace
+    # Create ITK-SNAP workspace with GradCAM overlayed on fMRI
     # create_itksnap_workspace(f'/Users/thomas.gillet/Downloads/{ID}_fmri.nii',
     #                         f'/Users/thomas.gillet/Downloads/{ID}_gradcam_3dd.nii',
     #                         f'{BASE_PATH}/explainability/xAi_gradcam3DViT/')
@@ -151,6 +151,7 @@ if __name__ == '__main__':
     fig, axes = plt.subplots(rows, cols, figsize=(20, 5*rows))
     fig.suptitle('GradCAM Results Across Subjects', fontsize=16)
     
+    # Plot each subject's results
     for idx, (ID, image, attention, class_idx) in enumerate(results):
         row = idx // cols
         col = idx % cols
@@ -176,6 +177,6 @@ if __name__ == '__main__':
             axes[row, col].axis('off')
 
     plt.tight_layout()
-    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/explainability/xAi_gradcam3DViT/gender/{ids[0]}_vit_gender.png')
+    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/explainability/xAi_gradcam3DViT/gender/{ids[0]}_vit_gender55.png')
     plt.close()
     print("All results saved in single plot.")

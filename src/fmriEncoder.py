@@ -40,9 +40,9 @@ class fmriEncoder(nn.Module):
         self.backward_handle = last_attention.register_backward_hook(backward_hook)
 
     def forward(self, x):
-        # x is a tensor of shape (batch_size, 90, 90, 91)
+        # x is a tensor of shape (batch_size, 90, 90, 90)
         timepoints_encodings = self.encoder(x)   # Encode each timepoint with 3D-ViT
-        timepoints_encodings = self.projection(timepoints_encodings) # batch, 1024 linear to batch, 2
+        timepoints_encodings = self.projection(timepoints_encodings) # Linear projection [batch, 1024] -> [batch, 2]
         return timepoints_encodings
     
     def get_attention_map(self, x):
@@ -55,7 +55,6 @@ class fmriEncoder(nn.Module):
         
         # Create one-hot vector for target class
         one_hot = torch.zeros_like(output)
-        # one_hot.scatter_(1, class_idx.unsqueeze(1), 1)
         one_hot[torch.arange(output.size(0)), class_idx] = 1
         print(f"One-hot vector: {one_hot}") 
         
@@ -65,7 +64,7 @@ class fmriEncoder(nn.Module):
         activations = self.activations  # [1, 1001, 1024] between -3 and 3
 
         # 1. Compute importance weights (global average pooling of gradients)
-        # weights = gradients.mean(dim=2, keepdim=True)         # [1, 1001, 1]
+        # weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
         # weights = gradients.abs().mean(dim=2, keepdim=True)
         weights = gradients.max(dim=2, keepdim=True)[0] 
         # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
@@ -95,15 +94,15 @@ class fmriEncoder(nn.Module):
     
     def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None, save_path='./gradcam_visualization.png'):
         """Improved visualization with better error handling"""
+        
+        # Check if CAM is computed
         if cam_3d is None:
             print("Error: No CAM computed")
             return
         
         # Process original volume
-        if torch.is_tensor(original_volume):
-            original = original_volume.squeeze().permute(2, 0, 1).detach().cpu().numpy()
-        else:
-            original = original_volume.squeeze()
+        original = original_volume.squeeze().permute(2, 0, 1)
+        original = original.detach().cpu().numpy()
         
         # Verify shapes
         if original.ndim != 3 or cam_3d.ndim != 3:
@@ -169,14 +168,13 @@ class ViT3DEncoder(nn.Module):
         ).to(self.device)
 
     def forward(self, x):
-        """Forward pass with optional attention tracking"""
-        # Input preprocessing (same as before)
+        # x is a tensor of shape (batch_size, 90, 90, 90)
+        # ViT3D expects (batch_size, channels, frames, height)
         timepoint = x.to(self.device)
-        if len(x.shape) == 4:
-            timepoint = timepoint.permute(0, 3, 1, 2)
-            timepoint = timepoint.unsqueeze(1)
-        
-        encoding = self.vit3d(timepoint)
+        timepoint = timepoint.permute(0, 3, 1, 2)
+        timepoint = timepoint.unsqueeze(1)
+
+        encoding = self.vit3d(timepoint) # output is [batch, 1024]
         return encoding
 
 class ResnetVideo(nn.Module):
@@ -225,12 +223,12 @@ class ProjectionHead(nn.Module):
         self.dropout = config["dropout"]
         
         # First average across timepoints to get (batch_size, 1024)
-        # Then project to 4 classes
+        # Then project to 2 classes
         self.projection = nn.Sequential(
             nn.Linear(1024, 512),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(512, 2)  # 4 classes: EMCI, CN, LMCI, AD
+            nn.Linear(512, 2)  # 2 classes classification
         ).to(self.device)
 
         self.projection2 = nn.Sequential(
@@ -238,7 +236,7 @@ class ProjectionHead(nn.Module):
             nn.BatchNorm1d(512),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(512, 2)  # 4 classes: EMCI, CN, LMCI, AD
+            nn.Linear(512, 2)  # 2 classes classification
         ).to(self.device)
 
         self.projection3 = nn.Sequential(
@@ -246,10 +244,10 @@ class ProjectionHead(nn.Module):
             nn.LayerNorm(512),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(512, 2)  # 4 classes: EMCI, CN, LMCI, AD
+            nn.Linear(512, 2)  # 2 classes classification
         ).to(self.device) 
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 1024)
-        logits = self.projection3(x)  # shape (batch_size, 2)
+        logits = self.projection3(x)  # output is [batch, 2]
         return logits
