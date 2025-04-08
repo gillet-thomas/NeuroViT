@@ -5,8 +5,7 @@ import torch
 import argparse
 import warnings
 import numpy as np
-from src.data.ADNIDataset import ADNIDataset
-from src.data.StructuralDataset import StructuralDataset
+from src.data.DatasetADNI import ADNIDataset
 from src.fmriEncoder import fmriEncoder
 from src.Trainer import Trainer
 

@@ -11,7 +11,8 @@ from torch.utils.data import Dataset
 from torch.nn import functional as F
 from torchvision.transforms import Resize
 
-class ADNIDataset(Dataset):
+# Pain study Marian Dataset
+class PainDataset(Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
         self.config = config

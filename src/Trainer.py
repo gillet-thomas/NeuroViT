@@ -55,7 +55,7 @@ class Trainer():
 
         total_time = 0  # Initialize total time
 
-        for i, (subject, timepoint, mri, gender, age, age_group, pain_group) in enumerate(self.dataloader):
+        for i, (subject, timepoint, mri, group, gender, age) in enumerate(self.dataloader):
             # start_time = time.time()  # Start timer for this iteration
             
             mri, gender = mri.to(self.device), gender.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
@@ -89,7 +89,7 @@ class Trainer():
         val_loss, correct, total = 0.0, 0, 0
 
         with torch.no_grad():
-            for i, (subject, timepoint, mri, gender, age, age_group, pain_group) in enumerate(self.val_dataloader):
+            for i, (subject, timepoint, mri, group, gender, age) in enumerate(self.val_dataloader):
                 mri, gender = mri.to(self.device), gender.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
                 outputs = self.model(mri)
                 loss = self.criterion(outputs, gender)

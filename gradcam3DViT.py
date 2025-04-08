@@ -114,8 +114,8 @@ def main(ID=151, slice_dim=0, slice_idx=45):
     fmri_img = nib.load(FMRI_PATH)
     fmri_data = fmri_img.dataobj[1:, 10:-9, 1: , 70]                        # Shape: (91, 109, 91, 146)
     fmri_norm = (fmri_data - np.mean(fmri_data)) / np.std(fmri_data)        # Normalize
-    input_tensor = torch.tensor(fmri_norm).to(config["device"]).float()     # Convert to float
-    input_tensor = input_tensor.unsqueeze(0)                                # Shape (1, 90, 90, 90)
+    input_tensor = torch.tensor(fmri_norm, dtype=torch.float32)             # Convert to float
+    input_tensor = input_tensor.unsqueeze(0).to(config["device"])           # Shape (1, 90, 90, 90)
 
     # Get attention map
     attention_map, class_idx = model.get_attention_map(input_tensor)        # output [90, 90, 90]

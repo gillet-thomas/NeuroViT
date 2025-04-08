@@ -1,21 +1,15 @@
 # Data paths
 output_dir: './results'
-dataset_train_path: './src/data/fmri_timepoints_train.pkl'
-# dataset_train_path_sMRI: './src/data/structural_train.pkl'
-dataset_val_path: './src/data/fmri_timepoints_val.pkl'
-# dataset_val_path_sMRI: './src/data/structural_val.pkl'
-csv_path: './src/data/paths_csv.csv'
-csv_full: '/mnt/data/iai/datasets/fMRI_marian/behavioural_data.csv'
+pain_csv: './src/data/paths_dataset_pain.csv'
+adni_csv: './src/data/paths_dataset_adni.csv'
+adni_train_path: './src/data/adni_train.pkl'
+adni_val_path: './src/data/adni_val.pkl'
 
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-20_14-01-28/model-e22.pth' # RESNET age group
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-20_10-50-08/model-e28.pth' # RESNET gender
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-26_08-41-52/model-e47.pth' # RESNET sMRI age group
-
-# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-31_16-20-41/model-e8.pth' # ViT age group (new)
-best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-01_14-40-34/model-e3.pth' # ViT gender (new)
-
-# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-12_09-11-56/model-e7.pth' # ViT pain group 18x18x1 patches
-# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-13_08-32-38/model-e9.pth' # ViT pain group 9x9x9 patches
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-31_16-20-41/model-e8.pth'  # ViT age group (new)
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-01_14-40-34/model-e3.pth'  # ViT gender (new)
 
 
 seed: 42

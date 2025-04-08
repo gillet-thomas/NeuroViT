@@ -11,6 +11,7 @@ from torch.utils.data import Dataset
 from torch.nn import functional as F
 from torchvision.transforms import Resize
 
+# Structural MRI dataset class
 class StructuralDataset(Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
