@@ -3,3 +3,5 @@
 - Timepoint sampling is the modification to classify each timepoint + AMP + sweeps + cross validation
 - Marian_fmri is the adaptation using marian's 65 patients dataset
 - gradcam is adaptation using brats dataset to make vit3d gradcam work
+- ADNI is for the implementation of the 3DViT on the ADNI dataset (alzheimer dataset)
+- enc4d is the implementation of the temporal transformer to create the final 4D fMRI encoder on the ADNI dataset
