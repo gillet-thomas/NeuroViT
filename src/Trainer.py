@@ -21,8 +21,13 @@ class Trainer():
         self.dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=True, prefetch_factor=2)
         self.val_dataloader = torch.utils.data.DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=True, prefetch_factor=2)
 
+        total_groups = 633
+        AD_count = 116
+        CN_count = 181
+        MCI_count = 336
+
         self.scaler = torch.amp.GradScaler()       # for Automatic Mixed Precision
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.CrossEntropyLoss(weight=torch.tensor([total_groups/CN_count, total_groups/MCI_count, total_groups/AD_count]).to(self.device))
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'], weight_decay=self.config['weight_decay'])
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', verbose=True)
         # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=10, eta_min=0)
@@ -55,13 +60,13 @@ class Trainer():
 
         total_time = 0  # Initialize total time
 
-        for i, (subject, timepoint, mri, group, gender, age) in enumerate(self.dataloader):
+        for i, (subject, timepoint, mri, group, gender, age, age_group) in enumerate(self.dataloader):
             # start_time = time.time()  # Start timer for this iteration
             
-            mri, gender = mri.to(self.device), gender.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
+            mri, group = mri.to(self.device), group.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 outputs = self.model(mri)  # output is [batch_size, 4]
-                loss = self.criterion(outputs, gender)
+                loss = self.criterion(outputs, group)
                 self.val_loss = loss
             
             self.optimizer.zero_grad(set_to_none=True) # Modestly improve performance
@@ -70,8 +75,8 @@ class Trainer():
             self.scaler.update()
 
             running_loss += loss.item()
-            correct += (outputs.argmax(dim=1) == gender).sum().item()
-            total += gender.size(0)  # returns the batch size
+            correct += (outputs.argmax(dim=1) == group).sum().item()
+            total += group.size(0)  # returns the batch size
 
             if i != 0 and i % self.log_interval == 0:
                 avg_loss = round(running_loss / self.log_interval, 5)
@@ -89,13 +94,13 @@ class Trainer():
         val_loss, correct, total = 0.0, 0, 0
 
         with torch.no_grad():
-            for i, (subject, timepoint, mri, group, gender, age) in enumerate(self.val_dataloader):
-                mri, gender = mri.to(self.device), gender.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
+            for i, (subject, timepoint, mri, group, gender, age, age_group) in enumerate(self.val_dataloader):
+                mri, group = mri.to(self.device), group.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
                 outputs = self.model(mri)
-                loss = self.criterion(outputs, gender)
+                loss = self.criterion(outputs, group)
                 val_loss += loss.item()
-                correct += (outputs.argmax(dim=1) == gender).sum().item()
-                total += gender.size(0)  # returns the batch size
+                correct += (outputs.argmax(dim=1) == group).sum().item()
+                total += group.size(0)  # returns the batch size
                 
             avg_val_loss = val_loss / len(self.val_dataloader)
             accuracy = correct / total
@@ -127,13 +132,13 @@ class Trainer():
 
         accuracy, duplicates = 0, 0
         with torch.no_grad():
-            for i, (subject, timepoint, mri, gender, age, age_group, pain_group) in tqdm(enumerate(evaluation_dataloader), total=len(evaluation_dataloader)):
+            for i, (subject, timepoint, mri, group, gender, age, age_group) in tqdm(enumerate(evaluation_dataloader), total=len(evaluation_dataloader)):
                 subject = subject[0]
                 mri = mri.to(self.device)
                 predictions = self.model(mri)  # Get model predictions (batch_size, 4)
 
                 prediction = predictions.argmax(dim=1).item()
-                actual = gender.item()
+                actual = group.item()
                 # print(f"Predictions of {i}: {self.data.selected_groups[prediction]}/{self.data.selected_groups[actual]}")
 
                 if subject in unique_train_subjects:

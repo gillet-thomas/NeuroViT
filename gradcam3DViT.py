@@ -104,7 +104,7 @@ def main(ID=151, slice_dim=0, slice_idx=45):
     BASE_PATH = "/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec"
     FMRI_PATH = f"/mnt/data/iai/datasets/fMRI_marian/{ID}/wau4D.nii"
     config = yaml.safe_load(open(BASE_PATH + "/configs/config.yaml"))
-    config["device"] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    config["device"] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Load Model and GradCAM
     model = fmriEncoder(config).to(config["device"]).eval()
@@ -120,13 +120,13 @@ def main(ID=151, slice_dim=0, slice_idx=45):
     # Get attention map
     attention_map, class_idx = model.get_attention_map(input_tensor)        # output [90, 90, 90]
     img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=slice_dim, slice_idx=slice_idx)
-    nib.save(nib.Nifti1Image(attention_map, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/gender/{ID}_gradcam_3dd.nii')
+    nib.save(nib.Nifti1Image(attention_map, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/adni/{ID}_gradcam_3dd.nii')
 
     # Save fMRI image for visualization
     fmri_slice = fmri_norm[ :, :, slice_idx]        # Choose middle slice, output shape: (90, 90)
     fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)  # Convert to RGB, output shape: (90, 90, 3)
     fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
-    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/gender/{ID}_fmri.nii')
+    nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/adni/{ID}_fmri.nii')
     print("GradCAM completed.")
 
     # Create ITK-SNAP workspace with GradCAM overlayed on fMRI
@@ -177,6 +177,6 @@ if __name__ == '__main__':
             axes[row, col].axis('off')
 
     plt.tight_layout()
-    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/explainability/xAi_gradcam3DViT/gender/{ids[0]}_vit_gender55.png')
+    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/explainability/xAi_gradcam3DViT/adni/{ids[0]}_vit_age2_epoch9.png')
     plt.close()
     print("All results saved in single plot.")

@@ -13,11 +13,9 @@ class fmriEncoder(nn.Module):
         self.config = config
         self.device = config["device"]
         
-        self.encoder = ViT3DEncoder(config)         # All parameters are trainable
-        self.projection = ProjectionHead(config)    # All parameters are trainable
-        # self.resnet_video = ResnetVideo(config)
-        # self.resnet_3d = Resnet3D(config)
-        
+        self.volume_encoder = ViT3DEncoder(config)
+        self.temporal_transformer = TemporalTransformer(config)
+        self.projection = ProjectionHead(config)
         self.to(self.device)  # Move entire model to device at once
 
         # Gradients and activations tracking
@@ -27,7 +25,7 @@ class fmriEncoder(nn.Module):
 
     def register_hooks(self):
         # Get the last attention layer
-        last_attention = self.encoder.vit3d.transformer.layers[-1][0].norm
+        last_attention = self.volume_encoder.vit3d.transformer.layers[-1][0].norm
 
         def forward_hook(module, input, output):
             self.activations = output.detach().cpu() # [1, 1001, 1024]
@@ -41,7 +39,7 @@ class fmriEncoder(nn.Module):
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 90, 90, 90)
-        timepoints_encodings = self.encoder(x)   # Encode each timepoint with 3D-ViT
+        timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
         timepoints_encodings = self.projection(timepoints_encodings) # Linear projection [batch, 1024] -> [batch, 2]
         return timepoints_encodings
     
@@ -66,7 +64,7 @@ class fmriEncoder(nn.Module):
         # 1. Compute importance weights (global average pooling of gradients)
         # weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
         # weights = gradients.abs().mean(dim=2, keepdim=True)
-        weights = gradients.max(dim=2, keepdim=True)[0] 
+        weights = gradients.mean(dim=2, keepdim=True)[0] 
         # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
@@ -145,7 +143,19 @@ class fmriEncoder(nn.Module):
         print(f"Visualization saved to {save_path}")
 
         return img, attn
-          
+       
+class TemporalTransformer(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.device = config["device"]
+        encoder_layer = nn.TransformerEncoderLayer(d_model=1024, nhead=8, batch_first=True) # input is [batch, n_volume, 1024]
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=6).to(self.device)
+
+    def forward(self, x):
+        # x is a tensor of shape (batch_size, n_volume, 1024)
+        logits = self.transformer(x)  # output is [batch, n_volume, 1024]
+        return logits
+
 class ViT3DEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -244,10 +254,11 @@ class ProjectionHead(nn.Module):
             nn.LayerNorm(512),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(512, 2)  # 2 classes classification
+            nn.Linear(512, 3)  # 2 classes classification
         ).to(self.device) 
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 1024)
         logits = self.projection3(x)  # output is [batch, 2]
         return logits
+
