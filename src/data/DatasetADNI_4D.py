@@ -10,7 +10,7 @@ from nilearn.image import load_img
 from torch.utils.data import Dataset
 
 # ADNI dataset class
-class ADNIDataset(Dataset):
+class ADNIDataset4D(Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
         self.config = config
@@ -18,14 +18,18 @@ class ADNIDataset(Dataset):
         self.csv_path = config['adni_csv']
         self.dataset_path = config['adni_train_path'] if mode == 'train' else config['adni_val_path']
         
-        # self.generate_data(config['adni_train_path'], config['adni_val_path'])
+        self.generate_data(config['adni_train_path'], config['adni_val_path'])
         # self.generate_folds('./src/data/')
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
+
+        sample = self.data[0]
+        print(f"Sample: {sample}")
+
         # keep only people with age <Q1 or >Q3
         # self.data = [sample for sample in self.data if sample[5] < 68 or sample[5] > 80]
-        self.data = [sample for sample in self.data if sample[3] in ['AD', 'CN', 'LMCI', 'EMCI']]
+        # self.data = [sample for sample in self.data if sample[3] in ['AD', 'CN', 'LMCI', 'EMCI']]
 
         print(f"Dataset initialized: {len(self.data)} {mode} samples")
         
@@ -55,30 +59,11 @@ class ADNIDataset(Dataset):
         print(f"Training rows: {len(train_df)}")            # 630
         print(f"Validation rows: {len(val_df)}")            # 60
 
-        train_samples, val_samples = [], []
-
-        # Process training data
-        print("Processing training data...")
-        for row in tqdm(train_df.itertuples(index=False), total=len(train_df)):
-            subject, group, sex, age, path_fmri = row.Subject, row.Group, row.Sex, row.Age, row.Path_fMRI_brain
-            samples = self.process_subject_data(subject, path_fmri, group, sex, age)
-            train_samples.extend(samples)
-        
-        # Process validation data
-        print("Processing validation data...")
-        for row in tqdm(val_df.itertuples(index=False), total=len(val_df)):
-            subject, group, sex, age, path_fmri = row.Subject, row.Group, row.Sex, row.Age, row.Path_fMRI_brain
-            samples = self.process_subject_data(subject, path_fmri, group, sex, age)
-            val_samples.extend(samples)
-        
-        print(f"Processed {len(train_samples)} train samples")          # 630
-        print(f"Processed {len(val_samples)} validation samples")       # 60
-        
         # Save to pickle files
         with open(train_path, 'wb') as f:
-            pickle.dump(train_samples, f)
+            pickle.dump(train_df, f)
         with open(val_path, 'wb') as f:
-            pickle.dump(val_samples, f)
+            pickle.dump(val_df, f)
         print("Datasets saved!")
 
     def generate_folds(self, base_path):

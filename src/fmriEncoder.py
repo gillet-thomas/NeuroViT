@@ -14,7 +14,7 @@ class fmriEncoder(nn.Module):
         self.device = config["device"]
         
         self.volume_encoder = ViT3DEncoder(config)
-        self.temporal_transformer = TemporalTransformer(config)
+        # self.temporal_transformer = TemporalTransformer(config)
         self.projection = ProjectionHead(config)
         self.to(self.device)  # Move entire model to device at once
 
@@ -261,4 +261,3 @@ class ProjectionHead(nn.Module):
         # x is a tensor of shape (batch_size, 1024)
         logits = self.projection3(x)  # output is [batch, 2]
         return logits
-

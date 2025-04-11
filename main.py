@@ -6,6 +6,7 @@ import argparse
 import warnings
 import numpy as np
 from src.data.DatasetADNI import ADNIDataset
+from src.data.DatasetADNI_4D import ADNIDataset4D
 from src.fmriEncoder import fmriEncoder
 from src.Trainer import Trainer
 

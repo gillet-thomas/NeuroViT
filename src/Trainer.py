@@ -25,9 +25,10 @@ class Trainer():
         AD_count = 116
         CN_count = 181
         MCI_count = 336
+        # weight=torch.tensor([total_groups/CN_count, total_groups/MCI_count, total_groups/AD_count]).to(self.device)
 
         self.scaler = torch.amp.GradScaler()       # for Automatic Mixed Precision
-        self.criterion = nn.CrossEntropyLoss(weight=torch.tensor([total_groups/CN_count, total_groups/MCI_count, total_groups/AD_count]).to(self.device))
+        self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'], weight_decay=self.config['weight_decay'])
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', verbose=True)
         # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=10, eta_min=0)
