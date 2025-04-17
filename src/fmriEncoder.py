@@ -166,8 +166,8 @@ class ViT3DEncoder(nn.Module):
             frames=90,
             image_size=90,
             channels=1,
-            frame_patch_size=9,
-            image_patch_size=9,
+            frame_patch_size=15,
+            image_patch_size=15,
             num_classes=1024,
             dim=1024,
             depth=6,
@@ -254,7 +254,7 @@ class ProjectionHead(nn.Module):
             nn.LayerNorm(512),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(512, 3)  # 2 classes classification
+            nn.Linear(512, 2)  # 2 classes classification
         ).to(self.device) 
 
     def forward(self, x):
