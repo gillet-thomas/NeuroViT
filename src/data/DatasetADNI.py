@@ -4,10 +4,15 @@ import pandas as pd
 import numpy as np
 import os
 import nibabel as nib
+import cv2
+import matplotlib.pyplot as plt
+import time 
 
 from tqdm import tqdm
 from nilearn.image import load_img
 from torch.utils.data import Dataset
+from monai.transforms import Compose, RandSpatialCrop, ToTensor
+
 
 # ADNI dataset class
 class ADNIDataset(Dataset):
@@ -17,6 +22,11 @@ class ADNIDataset(Dataset):
         self.batch_size = config['batch_size']
         self.csv_path = config['adni_csv']
         self.dataset_path = config['adni_train_path'] if mode == 'train' else config['adni_val_path']
+
+        self.transform = Compose([
+            RandSpatialCrop(roi_size=(75, 75, 75), random_center=True, random_size=False),
+            ToTensor()
+        ])
         
         # self.generate_data(config['adni_train_path'], config['adni_val_path'])
         # self.generate_folds('./src/data/')
@@ -184,6 +194,13 @@ class ADNIDataset(Dataset):
             fmri_data = fmri_img.dataobj[1:, 10:-9, 1: , timepoint]          # Shape: (91, 109, 91, 146) -> (90, 90, 90)
             mri_tensor = (fmri_data - fmri_data.mean()) / (fmri_data.std() + 1e-8)  # Normalize, add 1e-8 to avoid division by zero
             mri_tensor = torch.tensor(mri_tensor, dtype=torch.float32)      # (90, 90, 90) shape
+            
+            if self.transform:
+                mri_tensor = mri_tensor.unsqueeze(0)
+                # plt.imsave("mri_tensor0.png", mri_tensor.squeeze(0)[:,:, 45].numpy())
+                mri_tensor = self.transform(mri_tensor).squeeze
+                # plt.imsave("mri_tensor1.png", mri_tensor.squeeze(0)[:,:, 45].numpy())
+                # time.sleep(5)
 
             group_encoded = torch.tensor(0 if group == 'CN' else 1 if group in ['EMCI', 'LMCI'] else 2 if group == 'AD' else -1)     # 0: CN, 1: EMCI/LMCI, 2: AD, -1: unknown
             gender_encoded = torch.tensor(0 if gender == 'F' else 1)
