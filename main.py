@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 from src.data.DatasetADNI import ADNIDataset
 from src.data.DatasetADNI_4D import ADNIDataset4D
+from src.data.DatasetGradCAM import GradCAMDataset
 from src.fmriEncoder import fmriEncoder
 from src.Trainer import Trainer
 
@@ -23,7 +24,7 @@ def get_device(cuda_device):
     return f'cuda:{cuda_device}' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 
 def get_config(args):
-    config = yaml.safe_load(open("./configs/config.yaml"))
+    config = yaml.safe_load(open("/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/configs/config.yaml"))
     config["device"] = get_device(args.cuda)
     config.update({"wandb_enabled": args.wandb, "name": args.name, "inference": args.inference, "sweep": args.sweep})
     return config
@@ -49,8 +50,8 @@ def set_seeds(config):
     np.random.seed(config["seed"])
 
 def get_datasets(config):
-    dataset_train = ADNIDataset(config, mode="train")
-    dataset_val = ADNIDataset(config, mode="val")
+    dataset_train = GradCAMDataset(config, mode="train")
+    dataset_val = GradCAMDataset(config, mode="val")
     return dataset_train, dataset_val
 
 def main():
@@ -68,7 +69,7 @@ def main():
         #     fold_id = fold + 1
         #     config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
         #     config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
-
+        
         wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
         set_seeds(config)
         dataset_train, dataset_val = get_datasets(config)
@@ -81,7 +82,7 @@ def main():
 
     elif not config["inference"] and config["sweep"]:
         print("Sweep mode enabled.")
-        sweep_config = yaml.safe_load(open("./configs/sweep.yaml"))     # Load sweep configuration
+        sweep_config = yaml.safe_load(open(config["base_path"] + "/configs/sweep.yaml"))     # Load sweep configuration
         sweep_id = wandb.sweep(sweep_config, project="fMRI2Vec_Sweep")  # Initialize sweep
         wandb.agent(sweep_id, function=train_sweep, count=50)            # Start the sweep agent
 

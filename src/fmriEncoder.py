@@ -49,12 +49,12 @@ class fmriEncoder(nn.Module):
         output = self.forward(x)
         class_idx = output.argmax(dim=1)
         # class_idx = torch.tensor([1])
-        print(f"Class index: {class_idx}")  
+        print(f"Prediction index: {class_idx.item()}")  
         
         # Create one-hot vector for target class
         one_hot = torch.zeros_like(output)
         one_hot[torch.arange(output.size(0)), class_idx] = 1
-        print(f"One-hot vector: {one_hot}") 
+        # print(f"One-hot vector: {one_hot}") 
         
         # Backward pass to get gradients and activations from hooks
         output.backward(gradient=one_hot, retain_graph=True) 
@@ -63,8 +63,8 @@ class fmriEncoder(nn.Module):
 
         # 1. Compute importance weights (global average pooling of gradients)
         # weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
-        # weights = gradients.abs().mean(dim=2, keepdim=True)
-        weights = gradients.mean(dim=2, keepdim=True)[0] 
+        weights = gradients.abs().mean(dim=2, keepdim=True)
+        # weights = gradients.mean(dim=2, keepdim=True)[0] 
         # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
@@ -91,15 +91,14 @@ class fmriEncoder(nn.Module):
         return cam_3d.detach().cpu().numpy(), class_idx
     
     def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None, save_path='./gradcam_visualization.png'):
-        """Improved visualization with better error handling"""
-        
         # Check if CAM is computed
         if cam_3d is None:
             print("Error: No CAM computed")
             return
         
         # Process original volume
-        original = original_volume.squeeze().permute(2, 0, 1)
+        original = original_volume.squeeze()
+        # original = original_volume.squeeze().permute(2, 0, 1)
         original = original.detach().cpu().numpy()
         
         # Verify shapes
@@ -126,21 +125,22 @@ class fmriEncoder(nn.Module):
         except IndexError:
             print(f"Slice {slice_idx} out of bounds for dim {slice_dim}")
             return
+
         
         # Create figure
         fig, ax = plt.subplots(figsize=(6, 6))
         
-        # Overlay
-        ax.imshow(img, cmap='gray')
-        heatmap = ax.imshow(attn, cmap='jet', alpha=0.4)
-        fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
-        ax.set_title('Grad-CAM Attention')
-        ax.axis('off')
+        # # Overlay
+        # ax.imshow(img, cmap='gray')
+        # heatmap = ax.imshow(attn, cmap='jet', alpha=0.4)
+        # fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
+        # ax.set_title('Grad-CAM Attention')
+        # ax.axis('off')
         
-        plt.tight_layout()
-        plt.savefig(save_path, bbox_inches='tight', dpi=300)
-        plt.close(fig)
-        print(f"Visualization saved to {save_path}")
+        # plt.tight_layout()
+        # plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        # plt.close(fig)
+        # print(f"Visualization saved to {save_path}")
 
         return img, attn
        
@@ -163,11 +163,11 @@ class ViT3DEncoder(nn.Module):
         self.dropout = config["dropout"]
 
         self.vit3d = ViT(
-            frames=90,
-            image_size=90,
+            frames=40,
+            image_size=40,
             channels=1,
-            frame_patch_size=9,
-            image_patch_size=9,
+            frame_patch_size=10,
+            image_patch_size=10,
             num_classes=1024,
             dim=1024,
             depth=6,
@@ -181,7 +181,7 @@ class ViT3DEncoder(nn.Module):
         # x is a tensor of shape (batch_size, 90, 90, 90)
         # ViT3D expects (batch_size, channels, frames, height)
         timepoint = x.to(self.device)
-        timepoint = timepoint.permute(0, 3, 1, 2)
+        # timepoint = timepoint.permute(0, 3, 1, 2)
         timepoint = timepoint.unsqueeze(1)
 
         encoding = self.vit3d(timepoint) # output is [batch, 1024]
@@ -233,31 +233,18 @@ class ProjectionHead(nn.Module):
         self.dropout = config["dropout"]
         
         # First average across timepoints to get (batch_size, 1024)
-        # Then project to 2 classes
+        # Then project to 64 classes
+        self.projection2 = nn.Linear(1024, 64).to(self.device)
+
         self.projection = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.ReLU(),
-            nn.Dropout(self.dropout),
-            nn.Linear(512, 2)  # 2 classes classification
-        ).to(self.device)
-
-        self.projection2 = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.BatchNorm1d(512),
-            nn.ReLU(),
-            nn.Dropout(self.dropout),
-            nn.Linear(512, 2)  # 2 classes classification
-        ).to(self.device)
-
-        self.projection3 = nn.Sequential(
             nn.Linear(1024, 512),
             nn.LayerNorm(512),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-            nn.Linear(512, 2)  # 2 classes classification
+            nn.Linear(512, 64)  # 64 classes classification
         ).to(self.device) 
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 1024)
-        logits = self.projection3(x)  # output is [batch, 2]
+        logits = self.projection2(x)  # output is [batch, 64]
         return logits
