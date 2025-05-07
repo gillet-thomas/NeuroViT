@@ -16,9 +16,8 @@
             "name": "Python Debugger: Gradcam",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/fMRI2Vec/gradcam3DViT.py",
+            "program": "${workspaceFolder}/gradcam3DViT.py",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/fMRI2Vec"
         },
         {
             "name": "Python Debugger: Main",

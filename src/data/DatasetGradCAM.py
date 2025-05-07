@@ -9,6 +9,7 @@ import os
 import numpy as np
 import torch.nn.functional as F
 import nibabel as nib    
+import random
 
 # GradCAM dataset class
 class GradCAMDataset(Dataset):
@@ -21,17 +22,18 @@ class GradCAMDataset(Dataset):
 
         self.grid_size = 40
         self.patch_size = 10
-        self.num_samples = 10000
+        self.num_samples = 4000
 
         self.generate_data()
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
         print(f"Dataset initialized: {len(self.data)} {mode} samples")
-        self.visualize_sample_3d(1)
-        self.visualize_sample_3d(2)
-        self.visualize_sample_3d(3)
-        self.visualize_sample_3d(4)
+        # self.visualize_sample_3d(1)
+        # self.visualize_sample_3d(2)
+        # self.visualize_sample_3d(3)
+        # self.visualize_sample_3d(4)
+        # self.visualize_sample_3d(10)
 
 
     def generate_data(self):
@@ -45,9 +47,16 @@ class GradCAMDataset(Dataset):
             tx = np.random.randint(0, num_patches) * self.patch_size
             ty = np.random.randint(0, num_patches) * self.patch_size
             tz = np.random.randint(0, num_patches) * self.patch_size
+            # volumes[i] = 2
             volumes[i, tx:tx+self.patch_size, ty:ty+self.patch_size, tz:tz+self.patch_size] = 1
+
+            # label = np.random.randint(0, num_patches) * self.patch_size
+            # volumes[i, label:label+self.patch_size, 0:self.grid_size, 0:self.grid_size] = 1
+            # coordinates[i] = [label, 0, 0]
             
             coordinates[i] = [tx, ty, tz]
+            # labels[i] = 0 if tx < self.grid_size // 2 else 1
+            # labels[i] = tx // self.patch_size
             labels[i] = (tx//self.patch_size) + (ty//self.patch_size) * num_patches + (tz//self.patch_size) * num_patches * num_patches
             # print(f"Sample {i}: tx={tx}, ty={ty}, tz={tz}, label={labels[i]}")
 
@@ -145,7 +154,7 @@ class GradCAMDataset(Dataset):
         plt.savefig(os.path.join(save_path, f'sample_{idx}_visualization.png'), dpi=300)
         plt.close()
         
-        print(f"Visualization saved to {os.path.join(save_path, f'sample_{idx}_visualization.png')}")
+        print(f"Visualization saved to {os.path.join(save_path, f'sample_{idx}_visualization.gradcam')}")
     
         return volume, label
 
@@ -213,12 +222,12 @@ class GradCAMDataset(Dataset):
         # Save the figure
         plt.title(f'3D Visualization of Target Cube (Label: {label}, coordinates: {coordinates})')
         plt.tight_layout()
-        plt.savefig(os.path.join(save_path, f'sample_{idx}_3d_visualization.png'), dpi=300)
+        plt.savefig(os.path.join(save_path, f'sample2_{idx}_3d_visualization.png'), dpi=300)
         plt.close()
         
-        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(save_path, f'sample_{idx}_gradcam.nii'))
+        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(save_path, f'sample2_{idx}_gradcam.nii'))
 
-        print(f"3D visualization saved to {os.path.join(save_path, f'sample_{idx}_3d_visualization.png')}")
+        print(f"3D visualization saved to {os.path.join(save_path, f'sample2_{idx}_3d_visualization.png')}")
         
         return volume, label
     

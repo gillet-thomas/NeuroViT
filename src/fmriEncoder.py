@@ -14,6 +14,7 @@ class fmriEncoder(nn.Module):
         self.device = config["device"]
         
         self.volume_encoder = ViT3DEncoder(config)
+        # self.volume_encoder2 = Resnet3D(config)
         # self.temporal_transformer = TemporalTransformer(config)
         self.projection = ProjectionHead(config)
         self.to(self.device)  # Move entire model to device at once
@@ -40,7 +41,7 @@ class fmriEncoder(nn.Module):
     def forward(self, x):
         # x is a tensor of shape (batch_size, 90, 90, 90)
         timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
-        timepoints_encodings = self.projection(timepoints_encodings) # Linear projection [batch, 1024] -> [batch, 2]
+        # timepoints_encodings = self.projection(timepoints_encodings) # Linear projection [batch, 1024] -> [batch, 2]
         return timepoints_encodings
     
     def get_attention_map(self, x):
@@ -49,7 +50,6 @@ class fmriEncoder(nn.Module):
         output = self.forward(x)
         class_idx = output.argmax(dim=1)
         # class_idx = torch.tensor([1])
-        print(f"Prediction index: {class_idx.item()}")  
         
         # Create one-hot vector for target class
         one_hot = torch.zeros_like(output)
@@ -58,8 +58,8 @@ class fmriEncoder(nn.Module):
         
         # Backward pass to get gradients and activations from hooks
         output.backward(gradient=one_hot, retain_graph=True) 
-        gradients = self.gradients      # [1, 1001, 1024] between -8.5e07 and 9.7e07 
-        activations = self.activations  # [1, 1001, 1024] between -3 and 3
+        gradients = self.gradients # [1, 126, 64]
+        activations = self.activations # [1, 126, 64]
 
         # 1. Compute importance weights (global average pooling of gradients)
         # weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
@@ -68,13 +68,13 @@ class fmriEncoder(nn.Module):
         # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
-        cam = (weights * activations).sum(dim=2)  # [1, 1001, 1024] -> [1, 1001]
+        cam = (weights * activations).sum(dim=2)  # [1, 126, 64] -> [1, 126]
         
         # 3. Remove CLS token and process patches only
-        cam = cam[:, 1:]  # [1, 1000]
+        cam = cam[:, 1:]  # [1, 125]
         
         # 4. Reshape to 3D patch grid (10x10x10)
-        cam = cam.reshape(1, 10, 10, 10) 
+        cam = cam.reshape(1, 5, 5, 5)
         
         # 5. Normalize cam
         cam = F.relu(cam)
@@ -90,7 +90,7 @@ class fmriEncoder(nn.Module):
         
         return cam_3d.detach().cpu().numpy(), class_idx
     
-    def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None, save_path='./gradcam_visualization.png'):
+    def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None):
         # Check if CAM is computed
         if cam_3d is None:
             print("Error: No CAM computed")
@@ -163,29 +163,53 @@ class ViT3DEncoder(nn.Module):
         self.dropout = config["dropout"]
 
         self.vit3d = ViT(
-            frames=40,
-            image_size=40,
             channels=1,
-            frame_patch_size=10,
-            image_patch_size=10,
-            num_classes=1024,
-            dim=1024,
+            image_size=40,
+            image_patch_size=8,
+            frames=40,
+            frame_patch_size=8,
+            num_classes=128,
+            dim=64,
             depth=6,
             heads=8,
-            mlp_dim=2048,
+            mlp_dim=128,
             dropout=self.dropout,
             emb_dropout=self.dropout
         ).to(self.device)
 
     def forward(self, x):
         # x is a tensor of shape (batch_size, 90, 90, 90)
-        # ViT3D expects (batch_size, channels, frames, height)
+        # ViT3D expects (batch_size, channels, frames, height, width)
         timepoint = x.to(self.device)
         # timepoint = timepoint.permute(0, 3, 1, 2)
         timepoint = timepoint.unsqueeze(1)
 
         encoding = self.vit3d(timepoint) # output is [batch, 1024]
         return encoding
+
+class ProjectionHead(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.device = config["device"]
+        self.dropout = config["dropout"]
+        
+        # First average across timepoints to get (batch_size, 1024)
+        # Then project to 64 classes
+        self.projection2 = nn.Linear(64, 64).to(self.device)
+
+        self.projection = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.LayerNorm(512),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(512, 64)  # 64 classes classification
+        ).to(self.device) 
+
+    def forward(self, x):
+        # x is a tensor of shape (batch_size, 1024)
+        logits = self.projection2(x)  # output is [batch, 64]
+        return logits
+
 
 class ResnetVideo(nn.Module):
     def __init__(self, config):
@@ -225,26 +249,3 @@ class Resnet3D(nn.Module):
 
         x = self.resnet(x)
         return x
-
-class ProjectionHead(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.device = config["device"]
-        self.dropout = config["dropout"]
-        
-        # First average across timepoints to get (batch_size, 1024)
-        # Then project to 64 classes
-        self.projection2 = nn.Linear(1024, 64).to(self.device)
-
-        self.projection = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.LayerNorm(512),
-            nn.ReLU(),
-            nn.Dropout(self.dropout),
-            nn.Linear(512, 64)  # 64 classes classification
-        ).to(self.device) 
-
-    def forward(self, x):
-        # x is a tensor of shape (batch_size, 1024)
-        logits = self.projection2(x)  # output is [batch, 64]
-        return logits

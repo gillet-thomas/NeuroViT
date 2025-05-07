@@ -98,7 +98,7 @@ def create_itksnap_workspace(original_nifti, gradcam_nifti, output_dir):
     
     return output_path
 
-def main(config, dataset, ID=151, slice_dim=0, slice_idx=45):
+def main(config, dataset, ID=151):
     warnings.simplefilter(action='ignore', category=FutureWarning)
 
     # Load Model and GradCAM
@@ -118,9 +118,15 @@ def main(config, dataset, ID=151, slice_dim=0, slice_idx=45):
     input_tensor = sample[0].to(config["device"]).unsqueeze(0)
     print(f"ID: {ID} - Label: {sample[1].item()}, Coordinates: {sample[2].tolist()}")
 
+    patch_x = int(sample[2][0] + dataset.patch_size // 2)
+    patch_y = int(sample[2][1] + dataset.patch_size // 2)
+    patch_z = int(sample[2][2] + dataset.patch_size // 2)
+
+    print(f"Patch coordinates: {patch_x}, {patch_y}, {patch_z}")
+
     # Get attention map
     attention_map, class_idx = model.get_attention_map(input_tensor)        # output [90, 90, 90]
-    img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=slice_dim, slice_idx=slice_idx)
+    img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=0, slice_idx=patch_x)
     nib.save(nib.Nifti1Image(attention_map, np.eye(4)), f'{config["base_path"]}/{ID}_gradcam_3dd.nii')
 
     # Save fMRI image for visualization
@@ -143,45 +149,45 @@ if __name__ == '__main__':
     config["device"] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     dataset = GradCAMDataset(config, mode="val")
-    # ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    # results = []
-    # for i in ids:
-    #     results.append(main(config, dataset, ID=i, slice_idx=40))
-    #     print(f"Completed {i}")
+    ids = [0, 1]
+    results = []
+    for i in ids:
+        results.append(main(config, dataset, ID=i))
+        print(f"Completed {i}")
 
-    # # Create combined plot
-    # n = len(results)
-    # cols = 4
-    # rows = (n + cols - 1) // cols
-    # fig, axes = plt.subplots(rows, cols, figsize=(20, 5*rows))
-    # fig.suptitle('GradCAM Results Across Subjects', fontsize=16)
+    # Create combined plot
+    n = len(results)
+    cols = 4
+    rows = (n + cols - 1) // cols
+    fig, axes = plt.subplots(rows, cols, figsize=(20, 5*rows))
+    fig.suptitle('GradCAM Results Across Subjects', fontsize=16)
     
-    # # Plot each subject's results
-    # for idx, (ID, image, attention, class_idx) in enumerate(results):
-    #     row = idx // cols
-    #     col = idx % cols
+    # Plot each subject's results
+    for idx, (ID, image, attention, class_idx) in enumerate(results):
+        row = idx // cols
+        col = idx % cols
         
-    #     if rows == 1:
-    #         ax = axes[col]
-    #     else:
-    #         ax = axes[row, col]
+        if rows == 1:
+            ax = axes[col]
+        else:
+            ax = axes[row, col]
         
-    #     ax.imshow(image, cmap='gray')
-    #     heatmap = ax.imshow(attention, cmap='jet', alpha=0.4)
-    #     fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
-    #     ax.set_title(f'Subject {ID} (Class {class_idx.item()})')
-    #     ax.axis('off')
+        ax.imshow(image, cmap='gray')
+        heatmap = ax.imshow(attention, cmap='jet', alpha=0.4)
+        fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
+        ax.set_title(f'Subject {ID} (Class {class_idx.item()})')
+        ax.axis('off')
     
-    # # Hide empty subplots
-    # for idx in range(n, rows*cols):
-    #     row = idx // cols
-    #     col = idx % cols
-    #     if rows == 1:
-    #         axes[col].axis('off')
-    #     else:
-    #         axes[row, col].axis('off')
+    # Hide empty subplots
+    for idx in range(n, rows*cols):
+        row = idx // cols
+        col = idx % cols
+        if rows == 1:
+            axes[col].axis('off')
+        else:
+            axes[row, col].axis('off')
 
-    # plt.tight_layout()
-    # plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/gradcam3DViT_40.png')
-    # plt.close()
-    # print("All results saved in single plot.")
+    plt.tight_layout()
+    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/gradcam3DViT_40.png')
+    plt.close()
+    print("All results saved in single plot.")

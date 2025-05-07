@@ -57,10 +57,17 @@ class Trainer():
 
         for i, (volume, label, _) in enumerate(self.dataloader):
             # start_time = time.time()  # Start timer for this iteration
-            
+
             volume, label = volume.to(self.device), label.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 outputs = self.model(volume)  # output is [batch_size, 4]
+
+                if epoch == 0 and i == 0: # Assuming i is your batch index
+                    print("Model raw outputs (logits) for first batch:", outputs.detach().cpu().numpy())
+                    print("Labels for first batch:", label.detach().cpu().numpy())
+                    # You can also print the min/max/mean of the logits
+                    print(f"Logits stats: min={outputs.min().item()}, max={outputs.max().item()}, mean={outputs.mean().item()}")
+                    
                 loss = self.criterion(outputs, label)
                 self.val_loss = loss
             
@@ -74,7 +81,6 @@ class Trainer():
             correct += (outputs.argmax(dim=1) == label).sum().item()
             total += label.size(0)  # returns the batch size
             
-
             if i != 0 and i % self.log_interval == 0:
                 avg_loss = round(running_loss / self.log_interval, 5)
                 accuracy = round(correct / total, 5)
