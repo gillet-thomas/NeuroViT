@@ -14,9 +14,6 @@ class fmriEncoder(nn.Module):
         self.device = config["device"]
         
         self.volume_encoder = ViT3DEncoder(config)
-        # self.volume_encoder2 = Resnet3D(config)
-        # self.temporal_transformer = TemporalTransformer(config)
-        self.projection = ProjectionHead(config)
         self.to(self.device)  # Move entire model to device at once
 
         # Gradients and activations tracking
@@ -41,10 +38,11 @@ class fmriEncoder(nn.Module):
     def forward(self, x):
         # x is a tensor of shape (batch_size, 90, 90, 90)
         timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
-        # timepoints_encodings = self.projection(timepoints_encodings) # Linear projection [batch, 1024] -> [batch, 2]
         return timepoints_encodings
     
     def get_attention_map(self, x):
+        grid_size = self.config["grid_size"]
+        patch_size = self.config["vit_patch_size"]
 
         # Forward pass to get target class
         output = self.forward(x)
@@ -73,8 +71,9 @@ class fmriEncoder(nn.Module):
         # 3. Remove CLS token and process patches only
         cam = cam[:, 1:]  # [1, 125]
         
-        # 4. Reshape to 3D patch grid (10x10x10)
-        cam = cam.reshape(1, 5, 5, 5)
+        # 4. Reshape to 3D grid of patches
+        cam_size = grid_size // patch_size
+        cam = cam.reshape(1, cam_size, cam_size, cam_size)
         
         # 5. Normalize cam
         cam = F.relu(cam)
@@ -83,7 +82,7 @@ class fmriEncoder(nn.Module):
         # 6. Upsample to original size
         cam_3d = F.interpolate(
             cam.unsqueeze(0),  # [10, 10, 10]
-            size=(90, 90, 90),
+            size=(grid_size, grid_size, grid_size),
             mode='trilinear',
             align_corners=False
         ).squeeze()
@@ -126,55 +125,33 @@ class fmriEncoder(nn.Module):
             print(f"Slice {slice_idx} out of bounds for dim {slice_dim}")
             return
 
-        
-        # Create figure
-        fig, ax = plt.subplots(figsize=(6, 6))
-        
-        # # Overlay
-        # ax.imshow(img, cmap='gray')
-        # heatmap = ax.imshow(attn, cmap='jet', alpha=0.4)
-        # fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
-        # ax.set_title('Grad-CAM Attention')
-        # ax.axis('off')
-        
-        # plt.tight_layout()
-        # plt.savefig(save_path, bbox_inches='tight', dpi=300)
-        # plt.close(fig)
-        # print(f"Visualization saved to {save_path}")
-
         return img, attn
-       
-class TemporalTransformer(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.device = config["device"]
-        encoder_layer = nn.TransformerEncoderLayer(d_model=1024, nhead=8, batch_first=True) # input is [batch, n_volume, 1024]
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=6).to(self.device)
 
-    def forward(self, x):
-        # x is a tensor of shape (batch_size, n_volume, 1024)
-        logits = self.transformer(x)  # output is [batch, n_volume, 1024]
-        return logits
 
 class ViT3DEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.device = config["device"]
         self.dropout = config["dropout"]
+        self.grid_size = config["grid_size"]
+        self.cube_size = config["cube_size"]
+        self.patch_size = config["vit_patch_size"]
+        self.num_cubes = (self.grid_size // self.cube_size) ** 3 # num_cubes is number of possible positions of the cube in the grid
 
         self.vit3d = ViT(
             channels=1,
-            image_size=40,
-            image_patch_size=8,
-            frames=40,
-            frame_patch_size=8,
-            num_classes=128,
+            image_size=self.grid_size,
+            image_patch_size=self.patch_size,
+            frames=self.grid_size,
+            frame_patch_size=self.patch_size,
+            num_classes=self.num_cubes,
             dim=64,
             depth=6,
             heads=8,
             mlp_dim=128,
             dropout=self.dropout,
-            emb_dropout=self.dropout
+            emb_dropout=self.dropout,
+            pool='cls'
         ).to(self.device)
 
     def forward(self, x):
@@ -186,66 +163,3 @@ class ViT3DEncoder(nn.Module):
 
         encoding = self.vit3d(timepoint) # output is [batch, 1024]
         return encoding
-
-class ProjectionHead(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.device = config["device"]
-        self.dropout = config["dropout"]
-        
-        # First average across timepoints to get (batch_size, 1024)
-        # Then project to 64 classes
-        self.projection2 = nn.Linear(64, 64).to(self.device)
-
-        self.projection = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.LayerNorm(512),
-            nn.ReLU(),
-            nn.Dropout(self.dropout),
-            nn.Linear(512, 64)  # 64 classes classification
-        ).to(self.device) 
-
-    def forward(self, x):
-        # x is a tensor of shape (batch_size, 1024)
-        logits = self.projection2(x)  # output is [batch, 64]
-        return logits
-
-
-class ResnetVideo(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.device = config["device"]
-        self.resnet_video = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True).eval().to(self.device)
-        self.resnet_blocks = self.resnet_video.blocks[:-1]
-
-    def forward(self, x):
-
-        if len(x.shape) == 4:
-            x = x.unsqueeze(1)                  # Add channel dimension ([batch_size, 1, 91, 90, 90])
-        
-        x = x.permute(0, 1, 4, 2, 3)           # ([batch_size, C, F, H, W])
-        x = x.repeat(1, 3, 1, 1, 1)            # Shape (batch_size, 3, 91, 90, 90)
-
-        # Process through each ResNet block manually
-        for block in self.resnet_blocks:
-            x = block(x)
-        
-        # Apply adaptive pooling to get a fixed-size output
-        x = F.adaptive_avg_pool3d(x, (1, 1, 1))
-        x = x.view(x.shape[0], -1)  # Flatten to [batch_size, 2048]
-        return x
-
-class Resnet3D(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.device = config["device"]
-        self.resnet = generate_model(50, n_classes=1024)
-
-    def forward(self, x):
-        if len(x.shape) == 4:
-            x = x.unsqueeze(1)                  # Add channel dimension ([batch_size, 1, 91, 90, 90])
-
-        x = x.repeat(1, 3, 1, 1, 1)
-
-        x = self.resnet(x)
-        return x

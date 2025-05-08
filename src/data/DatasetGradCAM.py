@@ -10,48 +10,51 @@ from torch.utils.data import Dataset
 
 # GradCAM dataset class (fake data)
 class GradCAMDataset(Dataset):
-    def __init__(self, config, mode='train'):
+    def __init__(self, config, mode='train', generate_data=False):
         self.mode = mode
         self.config = config
         self.base_path = config['base_path']
         self.dataset_path = config['gradcam_train_path'] if mode == 'train' else config['gradcam_val_path']
 
         self.grid_size = config['grid_size']
-        self.patch_size = config['patch_size']
+        self.cube_size = config['cube_size']
+        self.grid_noise = config['grid_noise']
+        self.visualize_samples = config['visualize_samples']
         
         self.batch_size = config['batch_size']
         self.num_samples = config['num_samples']
 
-        if self.config['generate_dataset']:
+        if generate_data:
             self.generate_data()
-            
+        
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
-        print(f"Dataset initialized: {len(self.data)} {mode} samples")
-        # self.visualize_sample_3d(1)
-        # self.visualize_sample_3d(2)
-        # self.visualize_sample_3d(3)
-        # self.visualize_sample_3d(4)
-        # self.visualize_sample_3d(5)
+        if self.visualize_samples:
+            self.visualize_sample_3d(1)
+            self.visualize_sample_3d(2)
+            self.visualize_sample_3d(3)
+            self.visualize_sample_3d(4)
+            self.visualize_sample_3d(5)
 
+        print(f"Dataset initialized: {len(self.data)} {mode} samples")
 
     def generate_data(self):
         volumes = np.zeros((self.num_samples, self.grid_size, self.grid_size, self.grid_size))
         labels = np.zeros((self.num_samples), dtype=int)
         coordinates = np.zeros((self.num_samples, 3))
         
-        num_patches = self.grid_size // self.patch_size
+        num_cubes = self.grid_size // self.cube_size # Number of cubes in each dimension
         
         for i in range(self.num_samples):
-            tx = np.random.randint(0, num_patches) * self.patch_size
-            ty = np.random.randint(0, num_patches) * self.patch_size
-            tz = np.random.randint(0, num_patches) * self.patch_size
+            tx = np.random.randint(0, num_cubes) * self.cube_size
+            ty = np.random.randint(0, num_cubes) * self.cube_size
+            tz = np.random.randint(0, num_cubes) * self.cube_size
             
-            volumes[i] = 0.001 # Add noise for other voxels
-            volumes[i, tx:tx+self.patch_size, ty:ty+self.patch_size, tz:tz+self.patch_size] = 1
+            volumes[i] = self.grid_noise # Add noise for other voxels
+            volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = 1
+            labels[i] = (tx//self.cube_size) + (ty//self.cube_size) * num_cubes + (tz//self.cube_size) * num_cubes * num_cubes
             coordinates[i] = [tx, ty, tz]
-            labels[i] = (tx//self.patch_size) + (ty//self.patch_size) * num_patches + (tz//self.patch_size) * num_patches * num_patches
 
         train_size = int(0.8 * self.num_samples)
         train_samples = [(v, l, c) for v, l, c in zip(volumes[:train_size], labels[:train_size], coordinates[:train_size])]
@@ -98,26 +101,21 @@ class GradCAMDataset(Dataset):
         # Create 3D plot
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection='3d')
-        x_indices, y_indices, z_indices = np.where(volume == 1)     # Find all points where volume has value 1    
-        ax.scatter(x_indices, y_indices, z_indices, c='red', marker='s', alpha=0.4, s=50) # scatter plot for all points with value 1 (the cube)
-        
+        ax.scatter(*np.where(volume == 1), c='red', marker='s', alpha=0.5, s=50) # scatter plot for all points with value 1 (the cube)
+        # sc = ax.scatter(*np.indices(volume.shape).reshape(3, -1), c=volume.flatten(), cmap='viridis', alpha=0.4, s=20)
+        # fig.colorbar(sc, ax=ax, shrink=0.5, aspect=10, label='Voxel Intensity')
+
         # Add a bounding box for the volume
-        ax.set_xlim(0, volume.shape[0])
-        ax.set_ylim(0, volume.shape[1])
-        ax.set_zlim(0, volume.shape[2])
+        ax.set(xlim=(0, volume.shape[0]), ylim=(0, volume.shape[1]), zlim=(0, volume.shape[2])) # Grid size
+        ax.set(xlabel='X axis', ylabel='Y axis', zlabel='Z axis')
         
-        # Set labels
-        ax.set_xlabel('X axis')
-        ax.set_ylabel('Y axis')
-        ax.set_zlabel('Z axis')
-        
-        # Save the figure
+        # Save figure and nifti file
+        file_name = f'DatasetGradCAM_{self.grid_size}grid_{self.cube_size}cube_sample_{self.grid_noise}noise_{idx}'.replace('.', 'p')
         plt.title(f'3D Visualization of Target Cube (Label: {label}, coordinates: {coordinates})')
         plt.tight_layout()
-        plt.savefig(os.path.join(save_path, f'DatasetGradCAM_sample_{idx}.png'), dpi=300)
+        plt.savefig(os.path.join(save_path, f'{file_name}.png'), dpi=300)
         plt.close()
+        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(save_path, file_name))
         
-        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(save_path, f'DatasetGradCAM_sample_{idx}nii'))
-        
-        print(f"3D visualization saved to {os.path.join(save_path, f'DatasetGradCAM_sample_{idx}')}")
+        print(f"3D visualization saved to {os.path.join(save_path, file_name)}")
     

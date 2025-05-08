@@ -50,8 +50,8 @@ def set_seeds(config):
     np.random.seed(config["seed"])
 
 def get_datasets(config):
-    dataset_train = GradCAMDataset(config, mode="train")
-    dataset_val = GradCAMDataset(config, mode="val")
+    dataset_train = GradCAMDataset(config, mode="train", generate_data=config["generate_dataset"])
+    dataset_val = GradCAMDataset(config, mode="val", generate_data=False)
     return dataset_train, dataset_val
 
 def main():

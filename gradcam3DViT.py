@@ -6,7 +6,6 @@ import numpy as np
 import nibabel as nib
 from datetime import datetime
 import matplotlib.pyplot as plt
-from nilearn.image import load_img
 
 import xml.etree.ElementTree as ET
 from src.fmriEncoder import fmriEncoder
@@ -98,62 +97,30 @@ def create_itksnap_workspace(original_nifti, gradcam_nifti, output_dir):
     
     return output_path
 
-def main(config, dataset, ID=151):
-    warnings.simplefilter(action='ignore', category=FutureWarning)
+def get_sample_gradcam(id, save_sample_attention=False):
 
-    # Load Model and GradCAM
-    model = fmriEncoder(config).to(config["device"]).eval()
-    model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
-    
-    # Load and Preprocess fMRI Data
-    # FMRI_PATH = f"/mnt/data/iai/datasets/fMRI_marian/{ID}/wau4D.nii"
-    # fmri_img = nib.load(FMRI_PATH)
-    # fmri_data = fmri_img.dataobj[1:, 10:-9, 1: , 70]                        # Shape: (91, 109, 91, 146)
-    # fmri_norm = (fmri_data - np.mean(fmri_data)) / np.std(fmri_data)        # Normalize
-    # input_tensor = torch.tensor(fmri_norm, dtype=torch.float32)             # Convert to float
-    # input_tensor = input_tensor.unsqueeze(0).to(config["device"])           # Shape (1, 90, 90, 90)
-
-    # Load fake data
-    sample = dataset[ID]
+    sample = dataset[id]
     input_tensor = sample[0].to(config["device"]).unsqueeze(0)
-    print(f"ID: {ID} - Label: {sample[1].item()}, Coordinates: {sample[2].tolist()}")
+    print(f"ID: {id} - Label: {sample[1].item()}, Coordinates: {sample[2].tolist()}")
 
-    patch_x = int(sample[2][0] + dataset.patch_size // 2)
-    patch_y = int(sample[2][1] + dataset.patch_size // 2)
-    patch_z = int(sample[2][2] + dataset.patch_size // 2)
-
-    print(f"Patch coordinates: {patch_x}, {patch_y}, {patch_z}")
+    cube_size = config["cube_size"]
+    patch_x = int(sample[2][0] + cube_size // 2)
+    patch_y = int(sample[2][1] + cube_size // 2)
+    patch_z = int(sample[2][2] + cube_size // 2)
+    # print(f"Patch coordinates: {patch_x}, {patch_y}, {patch_z}")
 
     # Get attention map
     attention_map, class_idx = model.get_attention_map(input_tensor)        # output [90, 90, 90]
     img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=0, slice_idx=patch_x)
-    nib.save(nib.Nifti1Image(attention_map, np.eye(4)), f'{config["base_path"]}/{ID}_gradcam_3dd.nii')
 
-    # Save fMRI image for visualization
-    # fmri_slice = fmri_norm[ :, :, slice_idx]        # Choose middle slice, output shape: (90, 90)
-    # fmri_rgb = np.stack([fmri_slice] * 3, axis=-1)  # Convert to RGB, output shape: (90, 90, 3)
-    # fmri_rgb = (fmri_rgb - np.min(fmri_rgb)) / (np.max(fmri_rgb) - np.min(fmri_rgb))
-    # nib.save(nib.Nifti1Image(fmri_data, fmri_img.affine), f'{BASE_PATH}/explainability/xAi_gradcam3DViT/gradcam/{ID}_fmri.nii')
-    # print("GradCAM completed.")
+    if save_sample_attention:
+        nib.save(nib.Nifti1Image(attention_map, np.eye(4)), f'{config["base_path"]}/{id}_gradcam_3dd.nii')
 
-    # Create ITK-SNAP workspace with GradCAM overlayed on fMRI
-    # create_itksnap_workspace(f'/Users/thomas.gillet/Downloads/{ID}_fmri.nii',
-    #                         f'/Users/thomas.gillet/Downloads/{ID}_gradcam_3dd.nii',
-    #                         f'{BASE_PATH}/explainability/xAi_gradcam3DViT/')
+    return id, img, attn, class_idx
 
-    return ID, img, attn, class_idx
-
-
-if __name__ == '__main__':
-    config = yaml.safe_load(open("/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/configs/config.yaml"))
-    config["device"] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+def create_gradcam_plot(save_sample_attention=False):
     
-    dataset = GradCAMDataset(config, mode="val")
-    ids = [0, 1]
-    results = []
-    for i in ids:
-        results.append(main(config, dataset, ID=i))
-        print(f"Completed {i}")
+    results = [get_sample_gradcam(id, save_sample_attention=save_sample_attention) for id in ids]
 
     # Create combined plot
     n = len(results)
@@ -166,13 +133,9 @@ if __name__ == '__main__':
     for idx, (ID, image, attention, class_idx) in enumerate(results):
         row = idx // cols
         col = idx % cols
+        ax = axes[col] if rows == 1 else axes[row, col]
         
-        if rows == 1:
-            ax = axes[col]
-        else:
-            ax = axes[row, col]
-        
-        ax.imshow(image, cmap='gray')
+        ax.imshow(-image+1, cmap='gray')
         heatmap = ax.imshow(attention, cmap='jet', alpha=0.4)
         fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
         ax.set_title(f'Subject {ID} (Class {class_idx.item()})')
@@ -182,12 +145,25 @@ if __name__ == '__main__':
     for idx in range(n, rows*cols):
         row = idx // cols
         col = idx % cols
-        if rows == 1:
-            axes[col].axis('off')
-        else:
-            axes[row, col].axis('off')
+        (axes[col] if rows == 1 else axes[row, col]).axis('off')
 
+    file_name = f'DatasetGradCAM_{config["grid_size"]}grid_{config["cube_size"]}cube_{config["vit_patch_size"]}patch_{config["grid_noise"]}noise_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}'.replace('.', 'p')
     plt.tight_layout()
-    plt.savefig(f'/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/gradcam3DViT_40.png')
+    plt.savefig(os.path.join(config["base_path"], f"explainability/xAi_gradcam3DViT/DatasetGradCAM/{file_name}.png"), dpi=300)
     plt.close()
-    print("All results saved in single plot.")
+    print(f"All results saved to {file_name}.png")
+
+if __name__ == '__main__':
+    # Config 
+    warnings.simplefilter(action='ignore', category=FutureWarning)
+    config = yaml.safe_load(open("/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/configs/config.yaml"))
+    config["device"] = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+    
+    # Load Model and Dataset
+    model = fmriEncoder(config).to(config["device"]).eval()
+    model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
+    dataset = GradCAMDataset(config, mode="val", generate_data=False)
+
+    ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    create_gradcam_plot(save_sample_attention=False)
+    

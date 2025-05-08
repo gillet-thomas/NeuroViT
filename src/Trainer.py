@@ -47,27 +47,17 @@ class Trainer():
             # self.scheduler.step(self.val_loss)
 
             torch.save(self.model.state_dict(), f'{path}/model-e{epoch}.pth')
+            torch.save(self.model.state_dict(), f'./results/last_model.pth')
             print(f"MODEL SAVED to .{path}/model-e{epoch}.pth")
     
     def train(self, epoch):
         self.model.train()
         running_loss, correct, total = 0.0, 0, 0
 
-        total_time = 0  # Initialize total time
-
         for i, (volume, label, _) in enumerate(self.dataloader):
-            # start_time = time.time()  # Start timer for this iteration
-
             volume, label = volume.to(self.device), label.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
             with torch.autocast(device_type="cuda", dtype=torch.float16):
-                outputs = self.model(volume)  # output is [batch_size, 4]
-
-                if epoch == 0 and i == 0: # Assuming i is your batch index
-                    print("Model raw outputs (logits) for first batch:", outputs.detach().cpu().numpy())
-                    print("Labels for first batch:", label.detach().cpu().numpy())
-                    # You can also print the min/max/mean of the logits
-                    print(f"Logits stats: min={outputs.min().item()}, max={outputs.max().item()}, mean={outputs.mean().item()}")
-                    
+                outputs = self.model(volume)
                 loss = self.criterion(outputs, label)
                 self.val_loss = loss
             
@@ -88,9 +78,6 @@ class Trainer():
                 print(f"epoch {epoch}\t| batch {i}/{len(self.dataloader)}\t| train_loss: {avg_loss}\t| train_accuracy: {accuracy}\t| learning_rate: {lr}")
                 wandb.log({"epoch": epoch, "batch": i, "train_loss": avg_loss, "train_accuracy": accuracy, "learning_rate": lr})
                 correct, total, running_loss = 0, 0, 0.0
-            # end_time = time.time()  # End timer for this iteration
-            # total_time = end_time - start_time  # Accumulate time for this iteration
-            # print(f"Total time for training step: {total_time:.2f} seconds")  # Print total time
 
     def validate(self, epoch):
         self.model.eval()

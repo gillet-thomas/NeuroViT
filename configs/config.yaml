@@ -3,13 +3,10 @@ base_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec'
 output_dir: './results'
 pain_csv: './src/data/paths_dataset_pain.csv'
 adni_csv: './src/data/paths_dataset_adni.csv'
-adni_train_path: './src/data/adni_train.pkl'
-adni_val_path: './src/data/adni_val.pkl'
-
-gradcam_train_path: './src/data/gradcam_train.pkl'
-gradcam_val_path: './src/data/gradcam_val.pkl'
-gradcam_train_path_9: './src/data/gradcam_train_9.pkl'
-gradcam_val_path_9: './src/data/gradcam_val_9.pkl'
+adni_train_path: './src/data/pickle_dataset/adni_train.pkl'
+adni_val_path: './src/data/pickle_dataset/adni_val.pkl'
+gradcam_train_path: './src/data/pickle_dataset/gradcam_train.pkl'
+gradcam_val_path: './src/data/pickle_dataset/gradcam_val.pkl'
 
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-20_14-01-28/model-e22.pth' # RESNET age group
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-20_10-50-08/model-e28.pth' # RESNET gender
@@ -23,7 +20,8 @@ gradcam_val_path_9: './src/data/gradcam_val_9.pkl'
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-17_10-57-44/model-e5.pth'  # ViT Age group ADNI patches 15x15
 
 # best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-30_09-08-33/model-e8.pth'  # ViT Age group ADNI patches 15x15
-best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-05-07_14-41-26/model-e4.pth'  # ViT Age group FAKE patches 10x10
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-05-07_14-41-26/model-e4.pth'  # ViT Age group FAKE patches 10x10
+best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/last_model.pth'  # testing
 
 seed: 42
 epochs: 100
@@ -32,3 +30,12 @@ num_workers: 16           # Number of workers for data loading
 learning_rate: 0.0001
 weight_decay: 0        # Default on AdamW is 0.01
 dropout: 0
+
+#Dataset GradCAM
+generate_dataset: True    # Re-generate dataset and save to pickle
+visualize_samples: False   # Visualize 5 samples from dataset
+num_samples: 4000         # Number of samples to generate  
+grid_noise: 0             # Noise added to all other voxels
+grid_size: 44             # Size of the grid
+cube_size: 11             # Size of the target cube
+vit_patch_size: 4        # Patch size for 3D ViT
