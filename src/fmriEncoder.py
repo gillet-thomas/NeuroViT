@@ -61,9 +61,9 @@ class fmriEncoder(nn.Module):
 
         # 1. Compute importance weights (global average pooling of gradients)
         # weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
-        weights = gradients.abs().mean(dim=2, keepdim=True)
+        # weights = gradients.abs().mean(dim=2, keepdim=True)
         # weights = gradients.mean(dim=2, keepdim=True)[0] 
-        # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
+        weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
         cam = (weights * activations).sum(dim=2)  # [1, 126, 64] -> [1, 126]
@@ -145,10 +145,10 @@ class ViT3DEncoder(nn.Module):
             frames=self.grid_size,
             frame_patch_size=self.patch_size,
             num_classes=self.num_cubes,
-            dim=64,
+            dim=1024,
             depth=6,
             heads=8,
-            mlp_dim=128,
+            mlp_dim=2048,
             dropout=self.dropout,
             emb_dropout=self.dropout,
             pool='cls'

@@ -111,7 +111,9 @@ def get_sample_gradcam(id, save_sample_attention=False):
 
     # Get attention map
     attention_map, class_idx = model.get_attention_map(input_tensor)        # output [90, 90, 90]
-    img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=0, slice_idx=patch_x)
+    threshold_value = np.percentile(attention_map, 100 - 10)
+    thresholded_map = np.where(attention_map >= threshold_value, attention_map, 0)
+    img, attn = model.visualize_slice(thresholded_map, input_tensor, slice_dim=2, slice_idx=patch_z)
 
     if save_sample_attention:
         nib.save(nib.Nifti1Image(attention_map, np.eye(4)), f'{config["base_path"]}/{id}_gradcam_3dd.nii')

@@ -47,10 +47,10 @@ class GradCAMDataset(Dataset):
         num_cubes = self.grid_size // self.cube_size # Number of cubes in each dimension
         
         for i in range(self.num_samples):
-            tx = np.random.randint(0, num_cubes) * self.cube_size
-            ty = np.random.randint(0, num_cubes) * self.cube_size
-            tz = np.random.randint(0, num_cubes) * self.cube_size
-            
+            tx = np.random.randint(0, self.grid_size - self.cube_size)
+            ty = np.random.randint(0, self.grid_size - self.cube_size)
+            tz = np.random.randint(0, self.grid_size - self.cube_size)
+
             volumes[i] = self.grid_noise # Add noise for other voxels
             volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = 1
             labels[i] = (tx//self.cube_size) + (ty//self.cube_size) * num_cubes + (tz//self.cube_size) * num_cubes * num_cubes
