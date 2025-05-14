@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+import numpy as np
 
 from vit_pytorch.vit_3d import ViT
 from src.resnet3d import ResNet, generate_model
@@ -29,7 +30,7 @@ class fmriEncoder(nn.Module):
             self.activations = output.detach().cpu() # [1, 1001, 1024]
         
         def backward_hook(module, grad_input, grad_output):
-            self.gradients = grad_output[0].detach().cpu() # [1, 1001, 1024]
+            self.gradients = grad_output[0].detach().cpu() # [1, 1001, 102
         
         # Register hooks
         self.forward_handle = last_attention.register_forward_hook(forward_hook)
@@ -40,7 +41,7 @@ class fmriEncoder(nn.Module):
         timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
         return timepoints_encodings
     
-    def get_attention_map(self, x):
+    def get_attention_map(self, x, threshold=10):
         grid_size = self.config["grid_size"]
         patch_size = self.config["vit_patch_size"]
 
@@ -62,7 +63,7 @@ class fmriEncoder(nn.Module):
         # 1. Compute importance weights (global average pooling of gradients)
         # weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
         # weights = gradients.abs().mean(dim=2, keepdim=True)
-        # weights = gradients.mean(dim=2, keepdim=True)[0] 
+        # weights = gradients.max(dim=2, keepdim=True)[0] 
         weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
@@ -87,7 +88,10 @@ class fmriEncoder(nn.Module):
             align_corners=False
         ).squeeze()
         
-        return cam_3d.detach().cpu().numpy(), class_idx
+        threshold_value = np.percentile(cam_3d, 100 - threshold)
+        thresholded_map = np.where(cam_3d >= threshold_value, cam_3d, 0)
+
+        return thresholded_map, class_idx
     
     def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None):
         # Check if CAM is computed
@@ -144,7 +148,7 @@ class ViT3DEncoder(nn.Module):
             image_patch_size=self.patch_size,
             frames=self.grid_size,
             frame_patch_size=self.patch_size,
-            num_classes=self.num_cubes,
+            num_classes=2,
             dim=1024,
             depth=6,
             heads=8,

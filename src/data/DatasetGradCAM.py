@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import nibabel as nib    
 import matplotlib.pyplot as plt 
+import random
 
 from torch.utils.data import Dataset
 
@@ -50,6 +51,12 @@ class GradCAMDataset(Dataset):
             tx = np.random.randint(0, self.grid_size - self.cube_size)
             ty = np.random.randint(0, self.grid_size - self.cube_size)
             tz = np.random.randint(0, self.grid_size - self.cube_size)
+
+            # value = random.choice([-1, 1])
+            # volumes[i] = 0
+            # volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = value
+            # labels[i] = 0 if value == -1 else 1
+            # coordinates[i] = [tx, ty, tz]
 
             volumes[i] = self.grid_noise # Add noise for other voxels
             volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = 1
