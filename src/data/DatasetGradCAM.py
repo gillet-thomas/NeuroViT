@@ -48,20 +48,22 @@ class GradCAMDataset(Dataset):
         num_cubes = self.grid_size // self.cube_size # Number of cubes in each dimension
         
         for i in range(self.num_samples):
-            tx = np.random.randint(0, self.grid_size - self.cube_size)
-            ty = np.random.randint(0, self.grid_size - self.cube_size)
-            tz = np.random.randint(0, self.grid_size - self.cube_size)
+            tx = np.random.randint(0, num_cubes) * self.cube_size
+            ty = np.random.randint(0, num_cubes) * self.cube_size
+            tz = np.random.randint(0, num_cubes) * self.cube_size
 
+            # Classification task 1 (position)
+            volumes[i] = self.grid_noise # Add noise for other voxels
+            volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = 1
+            labels[i] = (tx//self.cube_size) + (ty//self.cube_size) * num_cubes + (tz//self.cube_size) * num_cubes * num_cubes
+            coordinates[i] = [tx, ty, tz]
+
+            # Classification task 2 (content)
             # value = random.choice([-1, 1])
             # volumes[i] = 0
             # volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = value
             # labels[i] = 0 if value == -1 else 1
             # coordinates[i] = [tx, ty, tz]
-
-            volumes[i] = self.grid_noise # Add noise for other voxels
-            volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = 1
-            labels[i] = (tx//self.cube_size) + (ty//self.cube_size) * num_cubes + (tz//self.cube_size) * num_cubes * num_cubes
-            coordinates[i] = [tx, ty, tz]
 
         train_size = int(0.8 * self.num_samples)
         train_samples = [(v, l, c) for v, l, c in zip(volumes[:train_size], labels[:train_size], coordinates[:train_size])]

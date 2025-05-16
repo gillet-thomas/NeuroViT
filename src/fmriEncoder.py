@@ -41,7 +41,7 @@ class fmriEncoder(nn.Module):
         timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
         return timepoints_encodings
     
-    def get_attention_map(self, x, threshold=10):
+    def get_attention_map(self, x, threshold=3):
         grid_size = self.config["grid_size"]
         patch_size = self.config["vit_patch_size"]
 
@@ -61,10 +61,10 @@ class fmriEncoder(nn.Module):
         activations = self.activations # [1, 126, 64]
 
         # 1. Compute importance weights (global average pooling of gradients)
-        # weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
+        weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
         # weights = gradients.abs().mean(dim=2, keepdim=True)
         # weights = gradients.max(dim=2, keepdim=True)[0] 
-        weights = F.relu(gradients).mean(dim=2, keepdim=True) 
+        # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
         cam = (weights * activations).sum(dim=2)  # [1, 126, 64] -> [1, 126]
@@ -79,19 +79,19 @@ class fmriEncoder(nn.Module):
         # 5. Normalize cam
         cam = F.relu(cam)
         cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8) # [0, 1]
+        threshold_value = np.percentile(cam, 100-threshold)
+        thresholded_map = np.where(cam >= threshold_value, cam, 0)
+        thresholded_map = torch.from_numpy(thresholded_map).unsqueeze(0)
         
         # 6. Upsample to original size
         cam_3d = F.interpolate(
-            cam.unsqueeze(0),  # [10, 10, 10]
+            thresholded_map,  # [10, 10, 10]
             size=(grid_size, grid_size, grid_size),
             mode='trilinear',
             align_corners=False
         ).squeeze()
         
-        threshold_value = np.percentile(cam_3d, 100 - threshold)
-        thresholded_map = np.where(cam_3d >= threshold_value, cam_3d, 0)
-
-        return thresholded_map, class_idx
+        return cam_3d, class_idx
     
     def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None):
         # Check if CAM is computed
@@ -148,7 +148,7 @@ class ViT3DEncoder(nn.Module):
             image_patch_size=self.patch_size,
             frames=self.grid_size,
             frame_patch_size=self.patch_size,
-            num_classes=2,
+            num_classes=self.num_cubes,
             dim=1024,
             depth=6,
             heads=8,
