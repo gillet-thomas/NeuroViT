@@ -41,7 +41,7 @@ class fmriEncoder(nn.Module):
         timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
         return timepoints_encodings
     
-    def get_attention_map(self, x, threshold=3):
+    def get_attention_map(self, x, threshold=5):
         grid_size = self.config["grid_size"]
         patch_size = self.config["vit_patch_size"]
 
@@ -155,7 +155,7 @@ class ViT3DEncoder(nn.Module):
             mlp_dim=2048,
             dropout=self.dropout,
             emb_dropout=self.dropout,
-            pool='cls'
+            pool='cls' # works better than mean pooling
         ).to(self.device)
 
     def forward(self, x):

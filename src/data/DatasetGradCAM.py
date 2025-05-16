@@ -48,9 +48,15 @@ class GradCAMDataset(Dataset):
         num_cubes = self.grid_size // self.cube_size # Number of cubes in each dimension
         
         for i in range(self.num_samples):
-            tx = np.random.randint(0, num_cubes) * self.cube_size
-            ty = np.random.randint(0, num_cubes) * self.cube_size
-            tz = np.random.randint(0, num_cubes) * self.cube_size
+            # Aligned cubes
+            # tx = np.random.randint(0, num_cubes) * self.cube_size
+            # ty = np.random.randint(0, num_cubes) * self.cube_size
+            # tz = np.random.randint(0, num_cubes) * self.cube_size
+
+            # Not-aligned cubes
+            tx = np.random.randint(0, self.grid_size - self.cube_size)
+            ty = np.random.randint(0, self.grid_size - self.cube_size)
+            tz = np.random.randint(0, self.grid_size - self.cube_size)
 
             # Classification task 1 (position)
             volumes[i] = self.grid_noise # Add noise for other voxels
