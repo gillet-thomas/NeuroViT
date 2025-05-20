@@ -8,6 +8,7 @@ import numpy as np
 from src.data.DatasetADNI import ADNIDataset
 from src.data.DatasetADNI_4D import ADNIDataset4D
 from src.data.DatasetGradCAM import GradCAMDataset
+from src.data.DatasetPain import PainDataset
 from src.fmriEncoder import fmriEncoder
 from src.Trainer import Trainer
 
@@ -52,6 +53,8 @@ def set_seeds(config):
 def get_datasets(config):
     dataset_train = GradCAMDataset(config, mode="train", generate_data=config["generate_dataset"])
     dataset_val = GradCAMDataset(config, mode="val", generate_data=False)
+    # dataset_train = PainDataset(config, mode="train")
+    # dataset_val = PainDataset(config, mode="val")
     return dataset_train, dataset_val
 
 def main():

@@ -2,10 +2,7 @@
 files: original tutorial from pytorch_grad_cam documentation
 
 **xAi_captum** folder (architecture 3D Resnet, ageGroup classification, captum)
-files: captum_LayerCAM.py (**works well**), captum_IntegratedGradients.py (not working)
-
-**xAi_ig** folder (architecture 3D Resnet, ageGroup classification, captum)
-files: captum_IntegratedGradients2.py (results not accurate)
+files: captum_LayerCAM.py (**works well**), captum_IntegratedGradients.py (not working), captum_IntegratedGradients2.py (results not accurate)
 
 **xAi_gradcam** folder (architecture 3D Resnet, ageGroup classification, pytorch_grad_cam)
 files: gradcam.py (**works well** for both ageGroup and gender classification), gradcam_sMRI.py (**works well** for classification on sMRI of Marian)

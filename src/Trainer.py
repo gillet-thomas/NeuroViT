@@ -57,7 +57,7 @@ class Trainer():
         for i, (volume, label, _) in enumerate(self.dataloader):
             volume, label = volume.to(self.device), label.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
             with torch.autocast(device_type="cuda", dtype=torch.float16):
-                outputs = self.model(volume)
+                outputs = self.model(volume)  
                 loss = self.criterion(outputs, label)
                 self.val_loss = loss
             
@@ -79,13 +79,13 @@ class Trainer():
                 wandb.log({"epoch": epoch, "batch": i, "train_loss": avg_loss, "train_accuracy": accuracy, "learning_rate": lr})
                 correct, total, running_loss = 0, 0, 0.0
 
-    def validate(self, epoch):
+    def validate(self, epoch):  
         self.model.eval()
         val_loss, correct, total = 0.0, 0, 0
 
         with torch.no_grad():
             for i, (volume, label, _) in enumerate(self.val_dataloader):
-                volume, label = volume.to(self.device), label.to(self.device)  ## (batch_size, 64, 64, 48) and (batch_size)
+                volume, label = volume.to(self.device), label.to(self.device)  ## (batch_size, 64, 64, 48, 140) and (batch_size)
                 outputs = self.model(volume)
                 loss = self.criterion(outputs, label)
                 val_loss += loss.item()

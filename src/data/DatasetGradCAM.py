@@ -4,8 +4,6 @@ import pickle
 import numpy as np
 import nibabel as nib    
 import matplotlib.pyplot as plt 
-import random
-
 from torch.utils.data import Dataset
 
 
@@ -49,14 +47,14 @@ class GradCAMDataset(Dataset):
         
         for i in range(self.num_samples):
             # Aligned cubes
-            # tx = np.random.randint(0, num_cubes) * self.cube_size
-            # ty = np.random.randint(0, num_cubes) * self.cube_size
-            # tz = np.random.randint(0, num_cubes) * self.cube_size
+            tx = np.random.randint(0, num_cubes) * self.cube_size
+            ty = np.random.randint(0, num_cubes) * self.cube_size
+            tz = np.random.randint(0, num_cubes) * self.cube_size
 
             # Not-aligned cubes
-            tx = np.random.randint(0, self.grid_size - self.cube_size)
-            ty = np.random.randint(0, self.grid_size - self.cube_size)
-            tz = np.random.randint(0, self.grid_size - self.cube_size)
+            # tx = np.random.randint(0, self.grid_size - self.cube_size)
+            # ty = np.random.randint(0, self.grid_size - self.cube_size)
+            # tz = np.random.randint(0, self.grid_size - self.cube_size)
 
             # Classification task 1 (position)
             volumes[i] = self.grid_noise # Add noise for other voxels
@@ -87,16 +85,15 @@ class GradCAMDataset(Dataset):
 
     def __getitem__(self, idx):
         volume, label, coordinates = self.data[idx]
-        # label_encoded = F.one_hot(torch.tensor(label), num_classes=self.num_classes).float()
         return torch.tensor(volume, dtype=torch.float32), torch.tensor(label, dtype=torch.int64), torch.tensor(coordinates)
 
     def __len__(self):
         return len(self.data)
 
-    def visualize_sample_3d(self, idx, save_path="./explainability/xAi_gradcam3DViT/DatasetGradCAM/"):
+    def visualize_sample_3d(self, idx):
         
         # Create save directory if it doesn't exist
-        os.makedirs(save_path, exist_ok=True)
+        os.makedirs(self.config["gradcam_output_dir"], exist_ok=True)
         
         # Get the data
         volume, label, coordinates = self.data[idx]
@@ -117,20 +114,18 @@ class GradCAMDataset(Dataset):
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(*np.where(volume == 1), c='red', marker='s', alpha=0.5, s=50) # scatter plot for all points with value 1 (the cube)
-        # sc = ax.scatter(*np.indices(volume.shape).reshape(3, -1), c=volume.flatten(), cmap='viridis', alpha=0.4, s=20)
-        # fig.colorbar(sc, ax=ax, shrink=0.5, aspect=10, label='Voxel Intensity')
 
         # Add a bounding box for the volume
         ax.set(xlim=(0, volume.shape[0]), ylim=(0, volume.shape[1]), zlim=(0, volume.shape[2])) # Grid size
         ax.set(xlabel='X axis', ylabel='Y axis', zlabel='Z axis')
         
         # Save figure and nifti file
-        file_name = f'DatasetGradCAM_{self.grid_size}grid_{self.cube_size}cube_sample_{self.grid_noise}noise_{idx}'.replace('.', 'p')
+        file_name = f'DatasetGradCAM_{self.grid_size}grid_{self.cube_size}cube_{self.grid_noise}noise_{idx}'.replace('.', 'p')
         plt.title(f'3D Visualization of Target Cube (Label: {label}, coordinates: {coordinates})')
         plt.tight_layout()
-        plt.savefig(os.path.join(save_path, f'{file_name}.png'), dpi=300)
+
+        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(self.config["gradcam_output_dir"], file_name))
+        plt.savefig(os.path.join(self.config["gradcam_output_dir"], f'{file_name}.png'), dpi=300)
         plt.close()
-        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(save_path, file_name))
+        print(f"3D visualization saved to {os.path.join(self.config['gradcam_output_dir'], file_name)}")
         
-        print(f"3D visualization saved to {os.path.join(save_path, file_name)}")
-    

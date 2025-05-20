@@ -1,12 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
 import numpy as np
-
-from vit_pytorch.vit_3d import ViT
-from src.resnet3d import ResNet, generate_model
-
+from src.models.vit_3d import ViT
 
 class fmriEncoder(nn.Module):
     def __init__(self, config):
@@ -15,7 +11,7 @@ class fmriEncoder(nn.Module):
         self.device = config["device"]
         
         self.volume_encoder = ViT3DEncoder(config)
-        self.to(self.device)  # Move entire model to device at once
+        self.to(self.device)  # Move entire model to device
 
         # Gradients and activations tracking
         self.gradients = {}
@@ -27,50 +23,48 @@ class fmriEncoder(nn.Module):
         last_attention = self.volume_encoder.vit3d.transformer.layers[-1][0].norm
 
         def forward_hook(module, input, output):
-            self.activations = output.detach().cpu() # [1, 1001, 1024]
+            self.activations = output.detach().cpu()
         
         def backward_hook(module, grad_input, grad_output):
-            self.gradients = grad_output[0].detach().cpu() # [1, 1001, 102
+            self.gradients = grad_output[0].detach().cpu()
         
         # Register hooks
         self.forward_handle = last_attention.register_forward_hook(forward_hook)
         self.backward_handle = last_attention.register_backward_hook(backward_hook)
 
     def forward(self, x):
-        # x is a tensor of shape (batch_size, 90, 90, 90)
         timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
         return timepoints_encodings
     
-    def get_attention_map(self, x, threshold=5):
+    def get_attention_map(self, x):
         grid_size = self.config["grid_size"]
         patch_size = self.config["vit_patch_size"]
+        threshold = self.config["threshold"]
 
         # Forward pass to get target class
         output = self.forward(x)
         class_idx = output.argmax(dim=1)
-        # class_idx = torch.tensor([1])
         
         # Create one-hot vector for target class
         one_hot = torch.zeros_like(output)
         one_hot[torch.arange(output.size(0)), class_idx] = 1
-        # print(f"One-hot vector: {one_hot}") 
         
         # Backward pass to get gradients and activations from hooks
         output.backward(gradient=one_hot, retain_graph=True) 
-        gradients = self.gradients # [1, 126, 64]
-        activations = self.activations # [1, 126, 64]
+        gradients = self.gradients
+        activations = self.activations
 
         # 1. Compute importance weights (global average pooling of gradients)
-        weights = gradients.mean(dim=2, keepdim=True)         # weights are [1, 1001, 1]
+        # weights = gradients.mean(dim=2, keepdim=True)
         # weights = gradients.abs().mean(dim=2, keepdim=True)
         # weights = gradients.max(dim=2, keepdim=True)[0] 
-        # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
+        weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
-        cam = (weights * activations).sum(dim=2)  # [1, 126, 64] -> [1, 126]
+        cam = (weights * activations).sum(dim=2)  # [1, vit_tokens, dim] -> [1, vit_tokens]
         
         # 3. Remove CLS token and process patches only
-        cam = cam[:, 1:]  # [1, 125]
+        cam = cam[:, 1:]  # [1, vit_tokens-1]
         
         # 4. Reshape to 3D grid of patches
         cam_size = grid_size // patch_size
@@ -85,7 +79,7 @@ class fmriEncoder(nn.Module):
         
         # 6. Upsample to original size
         cam_3d = F.interpolate(
-            thresholded_map,  # [10, 10, 10]
+            thresholded_map,
             size=(grid_size, grid_size, grid_size),
             mode='trilinear',
             align_corners=False
@@ -94,6 +88,7 @@ class fmriEncoder(nn.Module):
         return cam_3d, class_idx
     
     def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None):
+        
         # Check if CAM is computed
         if cam_3d is None:
             print("Error: No CAM computed")
@@ -101,7 +96,7 @@ class fmriEncoder(nn.Module):
         
         # Process original volume
         original = original_volume.squeeze()
-        # original = original_volume.squeeze().permute(2, 0, 1)
+        # original = original_volume.squeeze().permute(2, 0, 1) # [H, W, D] -> [D, H, W] for fMRIs
         original = original.detach().cpu().numpy()
         
         # Verify shapes
@@ -159,11 +154,11 @@ class ViT3DEncoder(nn.Module):
         ).to(self.device)
 
     def forward(self, x):
-        # x is a tensor of shape (batch_size, 90, 90, 90)
+        # x is a 3D tensor of shape (batch_size, H, W, D)
         # ViT3D expects (batch_size, channels, frames, height, width)
         timepoint = x.to(self.device)
-        # timepoint = timepoint.permute(0, 3, 1, 2)
+        # timepoint = timepoint.permute(0, 3, 1, 2) # [batch, H, W, D] -> [batch, D, H, W] for fMRIs
         timepoint = timepoint.unsqueeze(1)
 
-        encoding = self.vit3d(timepoint) # output is [batch, 1024]
+        encoding = self.vit3d(timepoint) # output is [batch, dim]
         return encoding
