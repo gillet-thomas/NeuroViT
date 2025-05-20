@@ -167,3 +167,4 @@ wandb/
 *.pth
 *.pickle
 *.pkl
+startup.txt

@@ -1,17 +1,52 @@
-# Global
+#! Global Paths
+base_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec'
 output_dir: './results'
-training_enabled: 1
-wandb_enabled: 0
-cuda_device: 2
-dataset_path: './src/data/adni_dataset.pkl'
-mini_dataset_path: './src/data/adni_dataset_mini.pkl'
-csv_path: '/mnt/data/iai/datasets/ADNI_rsFMRI/paths_ADNI_fMRI_MRI.csv'
 
-# Training
+#! Pain dataset paths
+pain_csv: './src/data/paths_dataset_pain.csv'
+pain_train_path: './src/data/pickle_dataset/pain_train.pkl'
+pain_val_path: './src/data/pickle_dataset/pain_val.pkl'
+
+#! ADNI dataset paths
+adni_csv: './src/data/paths_dataset_adni.csv'
+adni_train_path: './src/data/pickle_dataset/adni_train.pkl'
+adni_val_path: './src/data/pickle_dataset/adni_val.pkl'
+
+#! GradCAM mock dataset paths
+gradcam_train_path: './src/data/pickle_dataset/gradcam_train.pkl'
+gradcam_val_path: './src/data/pickle_dataset/gradcam_val.pkl'
+
+#! Best models
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-20_14-01-28/model-e22.pth' # RESNET age group
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-20_10-50-08/model-e28.pth' # RESNET gender
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-26_08-41-52/model-e47.pth' # RESNET sMRI age group
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-03-31_16-20-41/model-e8.pth'  # ViT age group (new)
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-01_14-40-34/model-e3.pth'  # ViT gender (new)
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-08_10-51-41/model-e9.pth'  # ViT Gender ADNI 85%
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-09_14-53-58/model-e9.pth'  # ViT Age group ADNI 97%
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-17_10-57-44/model-e5.pth'  # ViT Age group ADNI patches 15x15
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-04-30_09-08-33/model-e8.pth'  # ViT Age group ADNI patches 15x15
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-05-07_14-41-26/model-e4.pth'  # ViT Age group FAKE patches 10x10
+# best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/2025-05-15_13-33-36/model-e19.pth' # ViT Mock dataset
+best_model_path: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/results/last_model.pth'  # For testing
+
+#! Training
 seed: 42
+epochs: 20
+batch_size: 16            # 128 is max for A100 GPU
+num_workers: 16           # Number of workers for data loading
 learning_rate: 0.0001
-epochs: 5
-batch_size: 64             # Test with 32
-# weight_decay: 0.1
-val_interval: 2           ## Validation every 100 iterations
-projection_dim: 1024
+weight_decay: 0.01        # Default on AdamW is 0.01
+dropout: 0.1
+
+#! Dataset GradCAM
+gradcam_output_dir: './explainability/xAi_gradcam_ViT3D/cubes'
+generate_dataset: False         # Re-generate dataset and save to pickle
+visualize_samples: False        # Visualize 5 samples from dataset
+save_gradcam_attention: False   # Save 3D attention maps to nifti and png 
+num_samples: 4000               # Number of samples to generate  
+grid_noise: 0                   # Noise added to all other voxels
+grid_size: 40                   # Size of the grid
+cube_size: 8                    # Size of the target cube
+vit_patch_size: 5               # Patch size for 3D ViT
+threshold: 5                    # Threshold for attention map
