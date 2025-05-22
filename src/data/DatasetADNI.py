@@ -31,8 +31,6 @@ class ADNIDataset(Dataset):
         #     ToTensor()
         # ])
         
-        # self.generate_data(config['adni_train_path'], config['adni_val_path'])
-        # self.generate_folds('./src/data/')
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
@@ -215,7 +213,7 @@ class ADNIDataset(Dataset):
             group_encoded = torch.tensor(0 if group == 'CN' else 1 if group in ['EMCI', 'LMCI'] else 2 if group == 'AD' else -1)     # 0: CN, 1: EMCI/LMCI, 2: AD, -1: unknown
             gender_encoded = torch.tensor(0 if gender == 'F' else 1)
             age = torch.tensor(age)
-            age_group = torch.tensor(0 if age < 69 else 1)      # min 56, max 96, median 74. Quartile1 = 68, Quartile3 = 80.
+            age_group = torch.tensor(0 if age < 69 else 1)      # min 56, max 96, median 74. Quartile1 = 69, Quartile3 = 78.
 
             # if age < 68 and age > 80:
             #     print("ERROR: age out of bounds")

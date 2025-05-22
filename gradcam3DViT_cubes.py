@@ -101,8 +101,9 @@ if __name__ == '__main__':
     
     # Load Model and Dataset
     model = fmriEncoder(config).to(config["device"]).eval()
-    model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
+    best_model_path = os.path.join(config["base_path"], config["best_model_path"])
+    model.load_state_dict(torch.load(best_model_path, map_location=config["device"]), strict=False)
     dataset = GradCAMDataset(config, mode="val", generate_data=False)
 
     ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    create_gradcam_plot(save_sample_attention=config["save_gradcam_attention"])
+    create_gradcam_plot(save_sample_attention=config["gradcam_save_attention"])
