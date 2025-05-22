@@ -1,14 +1,14 @@
-import sys
+import os
 import yaml
 import wandb
 import torch
 import argparse
 import warnings
 import numpy as np
+from src.data.DatasetPain import PainDataset
 from src.data.DatasetADNI import ADNIDataset
 from src.data.DatasetADNI_4D import ADNIDataset4D
 from src.data.DatasetGradCAM import GradCAMDataset
-from src.data.DatasetPain import PainDataset
 from src.fmriEncoder import fmriEncoder
 from src.Trainer import Trainer
 
@@ -51,10 +51,20 @@ def set_seeds(config):
     np.random.seed(config["seed"])
 
 def get_datasets(config):
-    dataset_train = GradCAMDataset(config, mode="train", generate_data=config["generate_dataset"])
-    dataset_val = GradCAMDataset(config, mode="val", generate_data=False)
-    # dataset_train = PainDataset(config, mode="train")
-    # dataset_val = PainDataset(config, mode="val")
+    # Dynamically load dataset class based on config
+    if config["dataset"] == "adni":
+        dataset_train = ADNIDataset(config, mode="train", generate_data=config["generate_dataset"])
+        dataset_val = ADNIDataset(config, mode="val", generate_data=False)
+    elif config["dataset"] == "adni4D":
+        dataset_train = ADNIDataset4D(config, mode="train", generate_data=config["generate_dataset"])
+        dataset_val = ADNIDataset4D(config, mode="val", generate_data=False)
+    elif config["dataset"] == "gradcam":
+        dataset_train = GradCAMDataset(config, mode="train", generate_data=config["generate_dataset"])
+        dataset_val = GradCAMDataset(config, mode="val", generate_data=False)
+    elif config["dataset"] == "pain":
+        dataset_train = PainDataset(config, mode="train", generate_data=config["generate_dataset"])
+        dataset_val = PainDataset(config, mode="val", generate_data=False)
+
     return dataset_train, dataset_val
 
 def main():
@@ -93,7 +103,8 @@ def main():
         print("Training is disabled. Inference only.")
         dataset_train, dataset_val = get_datasets(config)
         model = fmriEncoder(config)
-        model.load_state_dict(torch.load(config['best_model_path'], map_location=config["device"], weights_only=True))
+        best_model_path = os.path.join(config["base_path"], config["best_model_path"])
+        model.load_state_dict(torch.load(best_model_path, map_location=config["device"], weights_only=True))
         trainer = Trainer(config, model, dataset_train, dataset_val)
         trainer.evaluate_samples()
 
