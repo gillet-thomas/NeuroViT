@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,6 +12,26 @@ class fmriEncoder(nn.Module):
         self.device = config["device"]
         
         self.volume_encoder = ViT3DEncoder(config)
+
+        if config["dim"] == 4:
+            # Extract only ViT3D weights by filtering keys
+            best_model_path = os.path.join(config["base_path"], config["best_model_path"])
+            full_state_dict = torch.load(best_model_path)
+            vit3d_state_dict = {
+                k.replace("volume_encoder.vit3d.", "vit3d."): v 
+                for k, v in full_state_dict.items() 
+                if k.startswith("volume_encoder.vit3d.")
+            }
+            self.volume_encoder.load_state_dict(vit3d_state_dict, strict=True)
+
+            for param in self.volume_encoder.parameters():
+                param.requires_grad = False
+            self.volume_encoder.eval()
+
+            self.cls_token = nn.Parameter(torch.randn(1, 1, 2) * 0.01)
+            self.temporal_transformer = TemporalTransformer(config)
+            self.projection_head = ProjectionHead(config)
+
         self.to(self.device)  # Move entire model to device
 
         # Gradients and activations tracking
@@ -18,6 +39,27 @@ class fmriEncoder(nn.Module):
         self.activations = {}
         self.register_hooks() 
 
+    def forward(self, fmri):
+
+        if self.config["dim"] == 3:
+            fmri_encoding = self.volume_encoder(fmri) # [B, 1024]
+        elif self.config["dim"] == 4:
+            fmri = fmri.permute(0, 4, 1, 2, 3) # Original: [B, H, W, D, T] -> New: [B, T, H, W, D]
+            B, T, H, W, D = fmri.shape # Use T_orig to distinguish from new T
+            volumes = fmri.reshape(B * T, H, W, D)
+            volumes_encoding = self.volume_encoder(volumes) # [B*T, 1024]
+            volumes_encoding = volumes_encoding.reshape(B, T, -1) # [B, T, 1024]
+
+            cls_tokens = self.cls_token.expand(B, 1, 2) 
+            volumes_encoding = torch.cat([cls_tokens, volumes_encoding], dim=1) # [B, T+1, 1024]
+
+            fmri_encodings = self.temporal_transformer(volumes_encoding)  # Temporal transformer [B, T+1, 1024] -> [B, T+1, 1024]
+            # fmri_encoding = fmri_encodings.mean(dim=1) # [B, 1024]
+            fmri_encoding = fmri_encodings[:, 0, :] # [B, 1024]   # CLS tokens for classification 
+            fmri_encoding = self.projection_head(fmri_encoding) # [B, 2]
+
+        return fmri_encoding
+    
     def register_hooks(self):
         # Get the last attention layer
         last_attention = self.volume_encoder.vit3d.transformer.layers[-1][0].norm
@@ -31,15 +73,11 @@ class fmriEncoder(nn.Module):
         # Register hooks
         self.forward_handle = last_attention.register_forward_hook(forward_hook)
         self.backward_handle = last_attention.register_backward_hook(backward_hook)
-
-    def forward(self, x):
-        timepoints_encodings = self.volume_encoder(x)   # Encode each timepoint with 3D-ViT
-        return timepoints_encodings
     
     def get_attention_map(self, x):
         grid_size = self.config["grid_size"]
         patch_size = self.config["vit_patch_size"]
-        threshold = self.config["threshold"]
+        threshold = self.config["gradcam_threshold"]
 
         # Forward pass to get target class
         output = self.forward(x)
@@ -55,10 +93,10 @@ class fmriEncoder(nn.Module):
         activations = self.activations
 
         # 1. Compute importance weights (global average pooling of gradients)
-        # weights = gradients.mean(dim=2, keepdim=True)
+        weights = gradients.mean(dim=2, keepdim=True)
         # weights = gradients.abs().mean(dim=2, keepdim=True)
         # weights = gradients.max(dim=2, keepdim=True)[0] 
-        weights = F.relu(gradients).mean(dim=2, keepdim=True) 
+        # weights = F.relu(gradients).mean(dim=2, keepdim=True) 
 
         # 2. Weight activations by importance and sum all features
         cam = (weights * activations).sum(dim=2)  # [1, vit_tokens, dim] -> [1, vit_tokens]
@@ -127,6 +165,18 @@ class fmriEncoder(nn.Module):
         return img, attn
 
 
+class TemporalTransformer(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.device = config["device"]
+        encoder_layer = nn.TransformerEncoderLayer(d_model=2, nhead=2, batch_first=True) # input is [batch, timepoints, 1024]
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1).to(self.device)
+
+    def forward(self, x):
+        # x is a tensor of shape (batch_size, timepoints, 1024)
+        logits = self.transformer(x)  # output is [batch_size, timepoints, 1024]
+        return logits
+
 class ViT3DEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -135,7 +185,7 @@ class ViT3DEncoder(nn.Module):
         self.grid_size = config["grid_size"]
         self.cube_size = config["cube_size"]
         self.patch_size = config["vit_patch_size"]
-        self.num_cubes = (self.grid_size // self.cube_size) ** 3 # num_cubes is number of possible positions of the cube in the grid
+        self.num_cubes = (self.grid_size // self.cube_size) ** 3 # GradCAM Dataset: number of possible cube positions in grid
 
         self.vit3d = ViT(
             channels=1,
@@ -143,7 +193,7 @@ class ViT3DEncoder(nn.Module):
             image_patch_size=self.patch_size,
             frames=self.grid_size,
             frame_patch_size=self.patch_size,
-            num_classes=self.num_cubes,
+            num_classes=2,
             dim=1024,
             depth=6,
             heads=8,
@@ -157,8 +207,21 @@ class ViT3DEncoder(nn.Module):
         # x is a 3D tensor of shape (batch_size, H, W, D)
         # ViT3D expects (batch_size, channels, frames, height, width)
         timepoint = x.to(self.device)
-        # timepoint = timepoint.permute(0, 3, 1, 2) # [batch, H, W, D] -> [batch, D, H, W] for fMRIs
+        timepoint = timepoint.permute(0, 3, 1, 2) # [batch, H, W, D] -> [batch, D, H, W] for fMRIs
         timepoint = timepoint.unsqueeze(1)
 
         encoding = self.vit3d(timepoint) # output is [batch, dim]
         return encoding
+
+class ProjectionHead(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.device = config["device"]
+        self.projection_head = nn.Linear(2, 2).to(self.device)
+        # self.layernorm = nn.LayerNorm(2).to(self.device)
+
+    def forward(self, x):
+        # x is a tensor of shape (batch_size, 1024)
+        x = self.projection_head(x) # output is [batch, 2]
+        # x = self.layernorm(x)
+        return x
