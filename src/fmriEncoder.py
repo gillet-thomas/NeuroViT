@@ -34,7 +34,7 @@ class fmriEncoder(nn.Module):
                 param.requires_grad = False
             self.volume_encoder.eval()
 
-            self.cls_token = nn.Parameter(torch.randn(1, 1, 2) * 0.01)
+            # self.cls_token = nn.Parameter(torch.randn(1, 1, 2) * 0.01)
             self.temporal_transformer = TemporalTransformer(config)
             self.projection_head = ProjectionHead(config)
 
@@ -56,12 +56,12 @@ class fmriEncoder(nn.Module):
             volumes_encoding = self.volume_encoder(volumes) # [B*T, 1024]
             volumes_encoding = volumes_encoding.reshape(B, T, -1) # [B, T, 1024]
 
-            cls_tokens = self.cls_token.expand(B, 1, 2) 
-            volumes_encoding = torch.cat([cls_tokens, volumes_encoding], dim=1) # [B, T+1, 1024]
+            # cls_tokens = self.cls_token.expand(B, 1, 2) 
+            # volumes_encoding = torch.cat([cls_tokens, volumes_encoding], dim=1) # [B, T+1, 1024]
 
             fmri_encodings = self.temporal_transformer(volumes_encoding)  # Temporal transformer [B, T+1, 1024] -> [B, T+1, 1024]
-            # fmri_encoding = fmri_encodings.mean(dim=1) # [B, 1024]
-            fmri_encoding = fmri_encodings[:, 0, :] # [B, 1024]   # CLS tokens for classification 
+            fmri_encoding = fmri_encodings.mean(dim=1) # [B, 1024]
+            # fmri_encoding = fmri_encodings[:, 0, :] # [B, 1024]   # CLS tokens for classification 
             fmri_encoding = self.projection_head(fmri_encoding) # [B, 2]
 
         return fmri_encoding
@@ -131,7 +131,9 @@ class fmriEncoder(nn.Module):
         
         return cam_3d, class_idx
     
-    def visualize_slice(self, cam_3d, original_volume, slice_dim=0, slice_idx=None):
+    def visualize_slice(self, cam_3d, original_volume):
+        slice_dim = self.config['GRADCAM_SLICE_DIM']
+        slice_idx = self.config['GRADCAM_SLICE_IDX']
         
         # Check if CAM is computed
         if cam_3d is None:
@@ -148,24 +150,18 @@ class fmriEncoder(nn.Module):
             print(f"Shape mismatch: original {original.shape}, CAM {cam_3d.shape}")
             return
         
-        # Default to middle slice
-        if slice_idx is None:
-            slice_idx = original.shape[slice_dim] // 2
-        slice_idx = max(0, min(slice_idx, original.shape[slice_dim] - 1))
-        
         # Select slice
-        try:
-            if slice_dim == 0:  # Axial
-                img = original[slice_idx]
-                attn = cam_3d[slice_idx]
-            elif slice_dim == 1:  # Coronal
-                img = original[:, slice_idx]
-                attn = cam_3d[:, slice_idx]
-            else:  # Sagittal
-                img = original[:, :, slice_idx]
-                attn = cam_3d[:, :, slice_idx]
-        except IndexError:
-            print(f"Slice {slice_idx} out of bounds for dim {slice_dim}")
+        if slice_dim == 0:  # Sagial
+            img = original[slice_idx]
+            attn = cam_3d[slice_idx]
+        elif slice_dim == 1:  #  Coronal
+            img = original[:, slice_idx]
+            attn = cam_3d[:, slice_idx]
+        elif slice_dim == 2:  # Axial
+            img = original[:, :, slice_idx]
+            attn = cam_3d[:, :, slice_idx]
+        else:
+            print(f"Invalid slice dimension: {slice_dim}")
             return
 
         return img, attn

@@ -27,11 +27,11 @@ BEST_MODEL_PATH: './results/2025-05-20_18-21-18/model-e12.pth' # ViT 3D Age grou
 
 #! Training
 TRAINING_SEED: 42
-TRAINING_DIM: 4                    # Define 3D or 4D training for the fmriEncoder
+TRAINING_DIM: 3                    # Define 3D or 4D training for the fmriEncoder
 TRAINING_EPOCHS: 20
 TRAINING_BATCH_SIZE: 2            
 TRAINING_NUM_WORKERS: 16           # Number of workers for data loading
-TRAINING_LEARNING_RATE: 0.00001
+TRAINING_LEARNING_RATE: 0.1
 TRAINING_WEIGHT_DECAY: 0.01        # Default on AdamW is 0.01
 TRAINING_DROPOUT: 0.1
 TRAINING_VIT_INPUT_SIZE: 90
@@ -40,13 +40,16 @@ TRAINING_VIT_PATCH_SIZE: 9
 #! Dataset
 DATASET_NAME: adni4D                # pain, adni, adni4D, gradcam
 DATASET_SPLIT_RATIO: 0.8
-DATASET_GENERATE: True             # Re-generate dataset and save to pickle
+DATASET_GENERATE: False             # Re-generate dataset and save to pickle
 DATASET_VISUALIZE_SAMPLES: False    # Visualize samples 1-5 of dataset
 
 #! GradCAM
 GRADCAM_OUTPUT_DIR: './explainability/xAi_gradcam_ViT3D/adni/'
 GRADCAM_SAVE_ATTENTION: False       # Save 3D attention maps to nifti and png 
 GRADCAM_THRESHOLD: 5                # Threshold for attention map
+GRADCAM_THRESHOLD_3D: 0.5           # Threshold for 3D PNG chart, keep points above this value
+GRADCAM_SLICE_DIM: 2                # Sagial (0), Coronal (1), Axial (2)
+GRADCAM_SLICE_IDX: 45               # Slice index for visualization
 
 #! Dataset GradCAM
 GRADCAM_NUM_SAMPLES: 4000           # Number of samples to generate  

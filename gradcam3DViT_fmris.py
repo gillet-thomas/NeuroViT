@@ -23,10 +23,10 @@ def get_sample_gradcam(id, save_sample_attention=False):
 
     # Get attention map
     attention_map, class_idx = model.get_attention_map(input_tensor)
-    img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=2, slice_idx=45)
+    img, attn = model.visualize_slice(attention_map, input_tensor)
 
     if save_sample_attention:
-        nib.save(nib.Nifti1Image(attention_map.cpu().numpy(), np.eye(4)), f'{config['GRADCAM_OUTPUT_DIR']}/DatasetGradCAM_3Dattention_{id}.nii')
+        # nib.save(nib.Nifti1Image(attention_map.cpu().numpy(), np.eye(4)), f"{config['GRADCAM_OUTPUT_DIR']}/DatasetGradCAM_3Dattention_{id}.nii")
         save_gradcam_3d(attention_map, id, sample)
     
     return id, img, attn, class_idx, sample[1]
@@ -40,7 +40,7 @@ def create_gradcam_plot(save_sample_attention=False):
     cols = 4
     rows = (n + cols - 1) // cols
     fig, axes = plt.subplots(rows, cols, figsize=(20, 5*rows))
-    fig.suptitle(f'ADNI GradCAM Results {config['TRAINING_VIT_PATCH_SIZE']}patch', fontsize=16)
+    fig.suptitle(f"ADNI GradCAM Results {config['TRAINING_VIT_PATCH_SIZE']}patch", fontsize=16)
 
     # Plot each subject's results
     for idx, (ID, image, attention, class_idx, sample) in enumerate(results):
@@ -51,7 +51,7 @@ def create_gradcam_plot(save_sample_attention=False):
         ax.imshow(-image+1 if config['GRADCAM_BACKGROUND_NOISE'] < 1 else image, cmap='gray')    # INVERSE BRIGHTNESS
         heatmap = ax.imshow(attention, cmap='jet', alpha=0.4)
         fig.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
-        ax.set_title(f'Subject {ID} (Class {class_idx.item()})')
+        ax.set_title(f"Subject {ID} (Class {class_idx.item()})")
         ax.axis('off')
     
     # Hide empty subplots
@@ -60,7 +60,7 @@ def create_gradcam_plot(save_sample_attention=False):
         col = idx % cols
         (axes[col] if rows == 1 else axes[row, col]).axis('off')
 
-    file_name = f'ADNI_{config['TRAINING_VIT_PATCH_SIZE']}patch_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}'.replace('.', 'p')
+    file_name = f"ADNI_{config['TRAINING_VIT_PATCH_SIZE']}patch_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}".replace('.', 'p')
     plt.tight_layout()
     plt.savefig(os.path.join(config['GRADCAM_OUTPUT_DIR'], f"{file_name}.png"), dpi=300)
     plt.close()
@@ -70,7 +70,7 @@ def save_gradcam_3d(attention_map, id, sample):
     # Create 3D plot
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
-    threshold = 0.2
+    threshold = config['GRADCAM_THRESHOLD_3D']
     coords = np.argwhere(attention_map.cpu().numpy() > threshold)
     values = attention_map.cpu().numpy()[attention_map.cpu().numpy() > threshold]
 
@@ -87,10 +87,10 @@ def save_gradcam_3d(attention_map, id, sample):
 
     # Save figure and nifti file
     save_path = config['GRADCAM_OUTPUT_DIR']
-    file_name = f'ADNI_{config['TRAINING_VIT_PATCH_SIZE']}patch_3Dattention_{id}'.replace('.', 'p')
-    plt.title(f'3D GradCAM (Label: {sample[0]}')
+    file_name = f"ADNI_{config['TRAINING_VIT_PATCH_SIZE']}patch_3Dattention_{id}".replace('.', 'p')
+    plt.title(f"3D GradCAM (Label: {sample[0]})")
     plt.tight_layout()
-    plt.savefig(os.path.join(save_path, f'{file_name}.png'), dpi=300)
+    plt.savefig(os.path.join(save_path, f"{file_name}.png"), dpi=300)
     plt.close()
 
 if __name__ == '__main__':
