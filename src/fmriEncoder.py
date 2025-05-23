@@ -9,13 +9,13 @@ class fmriEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.device = config["device"]
+        self.device = config['DEVICE']
         
         self.volume_encoder = ViT3DEncoder(config)
 
-        if config["dim"] == 4:
+        if config['TRAINING_DIM'] == 4:
             # Extract only ViT3D weights by filtering keys
-            best_model_path = os.path.join(config["base_path"], config["best_model_path"])
+            best_model_path = os.path.join(config['GLOBAL_BASE_PATH'], config['BEST_MODEL_PATH'])
             full_state_dict = torch.load(best_model_path)
             vit3d_state_dict = {
                 k.replace("volume_encoder.vit3d.", "vit3d."): v 
@@ -41,9 +41,9 @@ class fmriEncoder(nn.Module):
 
     def forward(self, fmri):
 
-        if self.config["dim"] == 3:
+        if self.config['TRAINING_DIM'] == 3:
             fmri_encoding = self.volume_encoder(fmri) # [B, 1024]
-        elif self.config["dim"] == 4:
+        elif self.config['TRAINING_DIM'] == 4:
             fmri = fmri.permute(0, 4, 1, 2, 3) # Original: [B, H, W, D, T] -> New: [B, T, H, W, D]
             B, T, H, W, D = fmri.shape # Use T_orig to distinguish from new T
             volumes = fmri.reshape(B * T, H, W, D)
@@ -75,9 +75,9 @@ class fmriEncoder(nn.Module):
         self.backward_handle = last_attention.register_backward_hook(backward_hook)
     
     def get_attention_map(self, x):
-        grid_size = self.config["grid_size"]
-        patch_size = self.config["vit_patch_size"]
-        threshold = self.config["gradcam_threshold"]
+        grid_size = self.config['TRAINING_VIT_INPUT_SIZE']
+        patch_size = self.config['TRAINING_VIT_PATCH_SIZE']
+        threshold = self.config['GRADCAM_THRESHOLD']
 
         # Forward pass to get target class
         output = self.forward(x)
@@ -168,7 +168,7 @@ class fmriEncoder(nn.Module):
 class TemporalTransformer(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.device = config["device"]
+        self.device = config['DEVICE']
         encoder_layer = nn.TransformerEncoderLayer(d_model=2, nhead=2, batch_first=True) # input is [batch, timepoints, 1024]
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1).to(self.device)
 
@@ -180,11 +180,11 @@ class TemporalTransformer(nn.Module):
 class ViT3DEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.device = config["device"]
-        self.dropout = config["dropout"]
-        self.grid_size = config["grid_size"]
-        self.cube_size = config["cube_size"]
-        self.patch_size = config["vit_patch_size"]
+        self.device = config['DEVICE']
+        self.dropout = config['TRAINING_DROPOUT']
+        self.grid_size = config['TRAINING_VIT_INPUT_SIZE']
+        self.cube_size = config['GRADCAM_CUBE_SIZE']
+        self.patch_size = config['TRAINING_VIT_PATCH_SIZE']
         self.num_cubes = (self.grid_size // self.cube_size) ** 3 # GradCAM Dataset: number of possible cube positions in grid
 
         self.vit3d = ViT(
@@ -216,7 +216,7 @@ class ViT3DEncoder(nn.Module):
 class ProjectionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.device = config["device"]
+        self.device = config['DEVICE']
         self.projection_head = nn.Linear(2, 2).to(self.device)
         # self.layernorm = nn.LayerNorm(2).to(self.device)
 

@@ -16,9 +16,9 @@ class PainDataset(Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
         self.config = config
-        self.batch_size = config['batch_size']
-        self.csv_path = config['pain_csv']
-        self.dataset_path = config['pain_train_path'] if mode == 'train' else config['pain_val_path']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.csv_path = config['PAIN_CSV_PATH']
+        self.dataset_path = config['PAIN_TRAIN_PKL_PATH'] if mode == 'train' else config['PAIN_VAL_PKL_PATH']
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD'] # Not used on marian's dataset
         
         # self.generate_data(config['dataset_train_path'], config['dataset_val_path'])

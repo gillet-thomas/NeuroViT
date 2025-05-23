@@ -16,7 +16,7 @@ class StructuralDataset(Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
         self.config = config
-        self.batch_size = config['batch_size']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
         self.csv_path = config['csv_path']
         self.dataset_path = config['dataset_train_path'] if mode == 'train' else config['dataset_val_path']
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD'] # Not used on marian's dataset

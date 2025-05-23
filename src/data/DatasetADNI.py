@@ -19,9 +19,9 @@ class ADNIDataset(Dataset):
     def __init__(self, config, mode='train', generate_data=False):
         self.mode = mode
         self.config = config
-        self.batch_size = config['batch_size']
-        self.csv_path = config['adni_csv']
-        self.dataset_path = config['adni_train_path'] if mode == 'train' else config['adni_val_path']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.csv_path = config['ADNI_CSV_PATH']
+        self.dataset_path = config['ADNI_TRAIN_PATH'] if mode == 'train' else config['ADNI_VAL_PATH']
 
         if generate_data:
             self.generate_data()
@@ -93,9 +93,9 @@ class ADNIDataset(Dataset):
         print(f"Processed {len(val_samples)} validation samples")       # 60 - 4480 with young/old groups
         
         # Save to pickle files  
-        with open(self.config['adni_train_path'], 'wb') as f:
+        with open(self.config['ADNI_TRAIN_PATH'], 'wb') as f:
             pickle.dump(train_samples, f)
-        with open(self.config['adni_val_path'], 'wb') as f:
+        with open(self.config['ADNI_VAL_PATH'], 'wb') as f:
             pickle.dump(val_samples, f)
         print("Datasets saved!")
 

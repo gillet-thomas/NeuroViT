@@ -26,8 +26,8 @@ def get_device(cuda_device):
 
 def get_config(args):
     config = yaml.safe_load(open("/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/configs/config.yaml"))
-    config["device"] = get_device(args.cuda)
-    config.update({"wandb_enabled": args.wandb, "name": args.name, "inference": args.inference, "sweep": args.sweep})
+    config['DEVICE'] = get_device(args.cuda)
+    config.update({"WANDB_ENABLED": args.wandb, "NAME": args.name, "INFERENCE": args.inference, "SWEEP": args.sweep})
     return config
 
 def train_sweep():
@@ -47,22 +47,22 @@ def train_sweep():
         trainer.run()
 
 def set_seeds(config):
-    torch.manual_seed(config["seed"])
-    np.random.seed(config["seed"])
+    torch.manual_seed(config['TRAINING_SEED'])
+    np.random.seed(config['TRAINING_SEED'])
 
 def get_datasets(config):
     # Dynamically load dataset class based on config
-    if config["dataset"] == "adni":
-        dataset_train = ADNIDataset(config, mode="train", generate_data=config["generate_dataset"])
+    if config['DATASET_NAME'] == "adni":
+        dataset_train = ADNIDataset(config, mode="train", generate_data=config['DATASET_GENERATE'])
         dataset_val = ADNIDataset(config, mode="val", generate_data=False)
-    elif config["dataset"] == "adni4D":
-        dataset_train = ADNIDataset4D(config, mode="train", generate_data=config["generate_dataset"])
+    elif config['DATASET_NAME'] == "adni4D":
+        dataset_train = ADNIDataset4D(config, mode="train", generate_data=config['DATASET_GENERATE'])
         dataset_val = ADNIDataset4D(config, mode="val", generate_data=False)
-    elif config["dataset"] == "gradcam":
-        dataset_train = GradCAMDataset(config, mode="train", generate_data=config["generate_dataset"])
+    elif config['DATASET_NAME'] == "gradcam":
+        dataset_train = GradCAMDataset(config, mode="train", generate_data=config['DATASET_GENERATE'])
         dataset_val = GradCAMDataset(config, mode="val", generate_data=False)
-    elif config["dataset"] == "pain":
-        dataset_train = PainDataset(config, mode="train", generate_data=config["generate_dataset"])
+    elif config['DATASET_NAME'] == "pain":
+        dataset_train = PainDataset(config, mode="train", generate_data=config['DATASET_GENERATE'])
         dataset_val = PainDataset(config, mode="val", generate_data=False)
 
     return dataset_train, dataset_val
@@ -74,7 +74,7 @@ def main():
     args = parse_args()
     config = get_config(args)
 
-    if not config["inference"] and not config["sweep"]:
+    if not config['INFERENCE'] and not config['SWEEP']:
         print("Training mode enabled.")
 
         # for fold in range(0, 5):
@@ -83,7 +83,7 @@ def main():
         #     config["dataset_train_path"] = './src/data/fold_' + str(fold_id) + '/train_data.pkl'
         #     config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
         
-        wandb.init(project="fMRI2Vec", mode='online' if config["wandb_enabled"] else 'disabled', config=config, name=config["name"]) 
+        wandb.init(project="fMRI2Vec", mode='online' if config['WANDB_ENABLED'] else 'disabled', config=config, name=config['NAME']) 
         set_seeds(config)
         dataset_train, dataset_val = get_datasets(config)
         model = fmriEncoder(config)
@@ -93,18 +93,18 @@ def main():
             # print(f"FOLD {fold}/5 completed.")
             # print("=" * 50)
 
-    elif not config["inference"] and config["sweep"]:
+    elif not config['INFERENCE'] and config['SWEEP']:
         print("Sweep mode enabled.")
-        sweep_config = yaml.safe_load(open(config["base_path"] + "/configs/sweep.yaml"))     # Load sweep configuration
+        sweep_config = yaml.safe_load(open(config['GLOBAL_BASE_PATH'] + "/configs/sweep.yaml"))     # Load sweep configuration
         sweep_id = wandb.sweep(sweep_config, project="fMRI2Vec_Sweep")  # Initialize sweep
         wandb.agent(sweep_id, function=train_sweep, count=50)            # Start the sweep agent
 
-    elif config["inference"] is True:
+    elif config['INFERENCE']:
         print("Training is disabled. Inference only.")
         dataset_train, dataset_val = get_datasets(config)
         model = fmriEncoder(config)
-        best_model_path = os.path.join(config["base_path"], config["best_model_path"])
-        model.load_state_dict(torch.load(best_model_path, map_location=config["device"], weights_only=True))
+        best_model_path = os.path.join(config['GLOBAL_BASE_PATH'], config['BEST_MODEL_PATH'])
+        model.load_state_dict(torch.load(best_model_path, map_location=config['DEVICE'], weights_only=True))
         trainer = Trainer(config, model, dataset_train, dataset_val)
         trainer.evaluate_samples()
 

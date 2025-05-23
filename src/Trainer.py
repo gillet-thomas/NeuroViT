@@ -10,11 +10,11 @@ from tqdm import tqdm
 class Trainer():
     def __init__(self, config, model, dataset_train, dataset_val):
         self.config = config
-        self.device = config['device']
+        self.device = config['DEVICE']
         self.model = model.to(self.device)
-        self.epochs = config['epochs']
-        self.batch_size = config['batch_size']
-        self.num_workers = config['num_workers']
+        self.epochs = config['TRAINING_EPOCHS']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.num_workers = config['TRAINING_NUM_WORKERS']
 
         self.data = dataset_train
         self.val_data = dataset_val
@@ -28,7 +28,7 @@ class Trainer():
 
         self.scaler = torch.amp.GradScaler()       # for Automatic Mixed Precision
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'], weight_decay=self.config['weight_decay'])
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config['TRAINING_LEARNING_RATE'], weight_decay=self.config['TRAINING_WEIGHT_DECAY'])
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', verbose=True, patience=1, factor=0.5)
         # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=10, eta_min=0)
         self.log_interval = len(self.dataloader) // 10  # Log every 10% of batches

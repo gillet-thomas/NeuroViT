@@ -14,9 +14,9 @@ class ADNIDataset4D(Dataset):
     def __init__(self, config, mode='train', generate_data=False):
         self.mode = mode
         self.config = config
-        self.batch_size = config['batch_size']
-        self.csv_path = config['adni_csv']
-        self.dataset_path = config['adni4D_train_path'] if mode == 'train' else config['adni4D_val_path']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.csv_path = config['ADNI_CSV_PATH']
+        self.dataset_path = config['ADNI_4D_TRAIN_PATH'] if mode == 'train' else config['ADNI_4D_VAL_PATH']
 
         if generate_data:
             self.generate_data()
@@ -67,9 +67,9 @@ class ADNIDataset4D(Dataset):
         val_list = val_df.values.tolist()
 
         # Save to pickle files
-        with open(self.config['adni4D_train_path'], 'wb') as f:
+        with open(self.config['ADNI_4D_TRAIN_PATH'], 'wb') as f:
             pickle.dump(train_list, f)
-        with open(self.config['adni4D_val_path'], 'wb') as f:
+        with open(self.config['ADNI_4D_VAL_PATH'], 'wb') as f:
             pickle.dump(val_list, f)
         print("Datasets saved!")
 
