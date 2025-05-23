@@ -18,8 +18,9 @@ class ADNIDataset(Dataset):
     def __init__(self, config, mode='train', generate_data=False):
         self.mode = mode
         self.config = config
-        self.batch_size = config['TRAINING_BATCH_SIZE']
         self.csv_path = config['ADNI_CSV_PATH']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.split_ratio = config['DATASET_SPLIT_RATIO'] 
         self.dataset_path = config['ADNI_TRAIN_PATH'] if mode == 'train' else config['ADNI_VAL_PATH']
 
         if generate_data:
@@ -51,8 +52,8 @@ class ADNIDataset(Dataset):
         old_subjects = df[df['Age'] > q75]['Subject'].unique()
         
         # Randomly shuffle and split subjects
-        young_train = int(0.9 * len(young_subjects))
-        old_train = int(0.9 * len(old_subjects))
+        young_train = int(self.split_ratio * len(young_subjects))
+        old_train = int(self.split_ratio * len(old_subjects))
         
         young_subjects = np.random.permutation(young_subjects)
         old_subjects = np.random.permutation(old_subjects)
@@ -214,8 +215,6 @@ class ADNIDataset(Dataset):
             age = torch.tensor(age)
             age_group = torch.tensor(0 if age < 69 else 1)      # min 56, max 96, median 74. Quartile1 = 69, Quartile3 = 78.
 
-            # if age < 68 and age > 80:
-            #     print("ERROR: age out of bounds")
             return subject, timepoint, mri_tensor, group_encoded, gender_encoded, age, age_group
         
         except Exception as e:

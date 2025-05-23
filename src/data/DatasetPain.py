@@ -16,8 +16,9 @@ class PainDataset(Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
         self.config = config
-        self.batch_size = config['TRAINING_BATCH_SIZE']
         self.csv_path = config['PAIN_CSV_PATH']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.split_ratio = config['DATASET_SPLIT_RATIO']
         self.dataset_path = config['PAIN_TRAIN_PKL_PATH'] if mode == 'train' else config['PAIN_VAL_PKL_PATH']
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD'] # Not used on marian's dataset
         
@@ -39,7 +40,7 @@ class PainDataset(Dataset):
         
         # Randomly shuffle and split subjects
         shuffled_subjects = np.random.permutation(unique_subjects)
-        train_size = int(0.9 * n_subjects)
+        train_size = int(self.split_ratio * n_subjects)
         train_subjects = shuffled_subjects[:train_size]
         val_subjects = shuffled_subjects[train_size:]
         

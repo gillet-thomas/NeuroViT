@@ -14,8 +14,9 @@ class ADNIDataset4D(Dataset):
     def __init__(self, config, mode='train', generate_data=False):
         self.mode = mode
         self.config = config
-        self.batch_size = config['TRAINING_BATCH_SIZE']
         self.csv_path = config['ADNI_CSV_PATH']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.split_ratio = config['DATASET_SPLIT_RATIO']
         self.dataset_path = config['ADNI_4D_TRAIN_PATH'] if mode == 'train' else config['ADNI_4D_VAL_PATH']
 
         if generate_data:
@@ -25,7 +26,11 @@ class ADNIDataset4D(Dataset):
             self.data = pickle.load(f)
 
         # Data filtering
-        # self.data = [sample for sample in self.data if sample[3] < 68 or sample[3] > 80]
+        self.data = [sample for sample in self.data if sample[4] < 69 or sample[4] > 78]
+        # young_subjects = [sample[0] for sample in self.data if sample[4] < 69]
+        # old_subjects = [sample[0] for sample in self.data if sample[4] > 78]
+        # print(f"Young subjects: {len(young_subjects)}")
+        # print(f"Old subjects: {len(old_subjects)}")
         # self.data = [sample for sample in self.data if sample[1] in ['AD', 'CN']]
         # self.data = self.data[:int(len(self.data) * 0.1)]
         print(f"Dataset initialized: {len(self.data)} {mode} samples")
@@ -43,8 +48,8 @@ class ADNIDataset4D(Dataset):
         old_subjects = df[df['Age'] > q75]['Subject'].unique()
         
         # Randomly shuffle and split subjects
-        young_train = int(0.9 * len(young_subjects))
-        old_train = int(0.9 * len(old_subjects))
+        young_train = int(self.split_ratio * len(young_subjects))
+        old_train = int(self.split_ratio * len(old_subjects))
         
         young_subjects = np.random.permutation(young_subjects)
         old_subjects = np.random.permutation(old_subjects)

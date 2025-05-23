@@ -16,6 +16,7 @@ class GradCAMDataset(Dataset):
         self.mode = mode
         self.config = config
         self.base_path = config['GLOBAL_BASE_PATH']
+        self.split_ratio = config['DATASET_SPLIT_RATIO']
         self.dataset_path = config['GRADCAM_TRAIN_PATH'] if mode == 'train' else config['GRADCAM_VAL_PATH']
 
         self.grid_size = config['TRAINING_VIT_INPUT_SIZE']
@@ -72,7 +73,7 @@ class GradCAMDataset(Dataset):
             # labels[i] = 0 if value == -1 else 1
             # coordinates[i] = [tx, ty, tz]
 
-        train_size = int(0.8 * self.num_samples)
+        train_size = int(self.split_ratio * self.num_samples)
         train_samples = [(v, l, c) for v, l, c in zip(volumes[:train_size], labels[:train_size], coordinates[:train_size])]
         val_samples = [(v, l, c) for v, l, c in zip(volumes[train_size:], labels[train_size:], coordinates[train_size:])]
         

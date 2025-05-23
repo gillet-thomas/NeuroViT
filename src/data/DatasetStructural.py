@@ -11,13 +11,14 @@ from nilearn.image import load_img
 from torch.utils.data import Dataset
 
 
-# Structural MRI dataset class
+# Structural MRI dataset class (NOT USED & NOT UPDATED)
 class StructuralDataset(Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
         self.config = config
-        self.batch_size = config['TRAINING_BATCH_SIZE']
         self.csv_path = config['csv_path']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.split_ratio = config['DATASET_SPLIT_RATIO']
         self.dataset_path = config['dataset_train_path'] if mode == 'train' else config['dataset_val_path']
         self.selected_groups = ['EMCI', 'CN', 'LMCI', 'AD'] # Not used on marian's dataset
         
@@ -42,7 +43,7 @@ class StructuralDataset(Dataset):
         
         # Randomly shuffle and split subjects
         shuffled_subjects = np.random.permutation(unique_subjects)
-        train_size = int(0.9 * n_subjects)
+        train_size = int(self.split_ratio * n_subjects)
         train_subjects = shuffled_subjects[:train_size]
         val_subjects = shuffled_subjects[train_size:]
         
