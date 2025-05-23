@@ -1,13 +1,13 @@
-import torch
+# Standard library imports
 import pickle
-import pandas as pd
-import numpy as np
-import os
-import nibabel as nib
 
-from tqdm import tqdm
-from nilearn.image import load_img
+# Third-party imports
+import torch
+import numpy as np
+import pandas as pd
+import nibabel as nib
 from torch.utils.data import Dataset
+
 
 # ADNI dataset class
 class ADNIDataset4D(Dataset):

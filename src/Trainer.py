@@ -1,11 +1,15 @@
+# Standard library imports
 import os
 import time
-import torch
-import wandb
 import pickle
 import datetime
+
+# Third-party imports
+import wandb
+import torch
 import torch.nn as nn
 from tqdm import tqdm
+
 
 class Trainer():
     def __init__(self, config, model, dataset_train, dataset_val):

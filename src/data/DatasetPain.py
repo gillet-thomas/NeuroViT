@@ -1,15 +1,15 @@
-import torch
-import pickle
-import pandas as pd
-import numpy as np
-import gc
+# Standard library imports
 import os
+import pickle
 
+# Third-party imports
+import torch
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from nilearn.image import load_img
 from torch.utils.data import Dataset
-from torch.nn import functional as F
-from torchvision.transforms import Resize
+
 
 # Pain study Marian Dataset
 class PainDataset(Dataset):

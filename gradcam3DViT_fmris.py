@@ -1,13 +1,19 @@
+# Standard library imports
 import os
 import yaml
-import torch
 import warnings
+from datetime import datetime
+
+# Third-party imports
+import torch
 import numpy as np
 import nibabel as nib
-from datetime import datetime
 import matplotlib.pyplot as plt
+
+# Local application/library specific imports
 from src.fmriEncoder import fmriEncoder
 from src.data.DatasetADNI import ADNIDataset
+
 
 def get_sample_gradcam(id, save_sample_attention=False):
 
@@ -20,7 +26,7 @@ def get_sample_gradcam(id, save_sample_attention=False):
     img, attn = model.visualize_slice(attention_map, input_tensor, slice_dim=2, slice_idx=45)
 
     if save_sample_attention:
-        # nib.save(nib.Nifti1Image(attention_map.cpu().numpy(), np.eye(4)), f'{config['GRADCAM_OUTPUT_DIR']}/DatasetGradCAM_3Dattention_{id}.nii')
+        nib.save(nib.Nifti1Image(attention_map.cpu().numpy(), np.eye(4)), f'{config['GRADCAM_OUTPUT_DIR']}/DatasetGradCAM_3Dattention_{id}.nii')
         save_gradcam_3d(attention_map, id, sample)
     
     return id, img, attn, class_idx, sample[1]

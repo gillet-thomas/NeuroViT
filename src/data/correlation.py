@@ -1,8 +1,9 @@
-import pandas as pd
+# Third-party imports
 import numpy as np
-from scipy.stats import pearsonr
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
 
 # This code is contributed by Amiya Rout
 path = '/mnt/data/iai/datasets/fMRI_marian/behavioural_data.csv'

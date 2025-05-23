@@ -1,16 +1,22 @@
+# Standard library imports
 import os
 import yaml
+import warnings
+import argparse
+
+# Third-party imports
 import wandb
 import torch
-import argparse
-import warnings
 import numpy as np
+
+# Local application/library specific imports
+from src.Trainer import Trainer
+from src.fmriEncoder import fmriEncoder
 from src.data.DatasetPain import PainDataset
 from src.data.DatasetADNI import ADNIDataset
 from src.data.DatasetADNI_4D import ADNIDataset4D
 from src.data.DatasetGradCAM import GradCAMDataset
-from src.fmriEncoder import fmriEncoder
-from src.Trainer import Trainer
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train or Evaluate fMRI Model")

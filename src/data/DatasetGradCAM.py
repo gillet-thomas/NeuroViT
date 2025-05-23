@@ -1,9 +1,12 @@
+# Standard library imports
 import os
-import torch
 import pickle
+
+# Third-party imports
+import torch
 import numpy as np
-import nibabel as nib    
-import matplotlib.pyplot as plt 
+import nibabel as nib
+import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
 
 

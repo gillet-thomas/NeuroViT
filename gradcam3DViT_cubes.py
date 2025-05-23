@@ -1,13 +1,19 @@
+# Standard library imports
 import os
 import yaml
-import torch
 import warnings
+from datetime import datetime
+
+# Third-party imports
+import torch
 import numpy as np
 import nibabel as nib
-from datetime import datetime
 import matplotlib.pyplot as plt
+
+# Local application/library specific imports
 from src.fmriEncoder import fmriEncoder
 from src.data.DatasetGradCAM import GradCAMDataset
+
 
 def get_sample_gradcam(id, save_sample_attention=False):
 

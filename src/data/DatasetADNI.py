@@ -1,17 +1,16 @@
-import torch
-import pickle
-import pandas as pd
-import numpy as np
+# Standard library imports
 import os
-import nibabel as nib
-import cv2
-import matplotlib.pyplot as plt
-import time 
+import pickle
 
+# Third-party imports
+import torch
+import numpy as np
+import pandas as pd
+import nibabel as nib
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 from nilearn.image import load_img
 from torch.utils.data import Dataset
-from monai.transforms import Compose, RandSpatialCrop, ToTensor
 
 
 # ADNI dataset class

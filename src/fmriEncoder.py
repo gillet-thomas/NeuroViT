@@ -1,9 +1,15 @@
+# Standard library imports
 import os
+
+# Third-party imports
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+
+# Local application/library specific imports
 from src.models.vit_3d import ViT
+
 
 class fmriEncoder(nn.Module):
     def __init__(self, config):
