@@ -11,6 +11,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from nilearn.image import load_img
 from torch.utils.data import Dataset
+from monai.transforms import Compose, RandSpatialCrop, ToTensor
 
 
 # ADNI dataset class
@@ -23,13 +24,14 @@ class ADNIDataset(Dataset):
         self.split_ratio = config['DATASET_SPLIT_RATIO'] 
         self.dataset_path = config['ADNI_TRAIN_PATH'] if mode == 'train' else config['ADNI_VAL_PATH']
 
+        if config['DATASET_TRANSFORMS']:
+            self.transform = Compose([
+                RandSpatialCrop(roi_size=(80, 80, 80), random_center=True, random_size=False),
+                ToTensor()
+            ])
+
         if generate_data:
             self.generate_data()
-
-        # self.transform = Compose([
-        #     RandSpatialCrop(roi_size=(75, 75, 75), random_center=True, random_size=False),
-        #     ToTensor()
-        # ])
         
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
@@ -203,12 +205,9 @@ class ADNIDataset(Dataset):
             mri_tensor = (fmri_data - fmri_data.mean()) / (fmri_data.std() + 1e-8)  # Normalize, add 1e-8 to avoid division by zero
             mri_tensor = torch.tensor(mri_tensor, dtype=torch.float32)      # (90, 90, 90) shape
             
-            # if self.transform:
-            #     mri_tensor = mri_tensor.unsqueeze(0)
-            #     # plt.imsave("mri_tensor0.png", mri_tensor.squeeze(0)[:,:, 45].numpy())
-            #     mri_tensor = self.transform(mri_tensor).squeeze
-            #     # plt.imsave("mri_tensor1.png", mri_tensor.squeeze(0)[:,:, 45].numpy())
-            #     # time.sleep(5)
+            if self.config['DATASET_TRANSFORMS']:
+                mri_tensor = mri_tensor.unsqueeze(0)
+                mri_tensor = self.transform(mri_tensor).squeeze()
 
             group_encoded = torch.tensor(0 if group == 'CN' else 1 if group in ['EMCI', 'LMCI'] else 2 if group == 'AD' else -1)     # 0: CN, 1: EMCI/LMCI, 2: AD, -1: unknown
             gender_encoded = torch.tensor(0 if gender == 'F' else 1)
