@@ -61,7 +61,8 @@ class GradCAMDataset(Dataset):
             # tz = np.random.randint(0, self.grid_size - self.cube_size)
 
             # Classification task 1 (position)
-            volumes[i] = self.grid_noise # Add noise for other voxels
+            volumes[i] = self.grid_noise # Add noise for all voxels
+            # volumes[i] = np.random.uniform(0, self.grid_noise, (self.grid_size, self.grid_size, self.grid_size)) # Add random noise for all voxels
             volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = 1
             labels[i] = (tx//self.cube_size) + (ty//self.cube_size) * num_cubes + (tz//self.cube_size) * num_cubes * num_cubes
             coordinates[i] = [tx, ty, tz]
