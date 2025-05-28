@@ -66,7 +66,7 @@ def create_gradcam_plot(save_sample_attention=False):
         col = idx % cols
         (axes[col] if rows == 1 else axes[row, col]).axis('off')
 
-    file_name = f"DatasetGradCAM_{config['TRAINING_VIT_INPUT_SIZE']}grid_{config['GRADCAM_CUBE_SIZE']}cube_{config['TRAINING_VIT_PATCH_SIZE']}patch_{config['GRADCAM_BACKGROUND_NOISE']}noise_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}".replace('.', 'p')
+    file_name = f"DatasetGradCAM_{config['TRAINING_VIT_INPUT_SIZE']}grid_{config['GRADCAM_CUBE_SIZE']}cube_{config['TRAINING_VIT_PATCH_SIZE']}patch_{config['GRADCAM_BACKGROUND_NOISE']}noise_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}".replace('.', 'p')
     plt.tight_layout()
     plt.savefig(os.path.join(config['GRADCAM_OUTPUT_DIR'], f"{file_name}.png"), dpi=300)
     plt.close()
