@@ -8,7 +8,7 @@ from nilearn.image import load_img
 import shap
 import time
 
-from src.fmriEncoder import fmriEncoder
+from src.models.fmriEncoder import fmriEncoder
 
 def main(ID=151):
     warnings.simplefilter(action='ignore', category=FutureWarning)

@@ -9,7 +9,7 @@ from nilearn.image import load_img
 import torch.nn.functional as F
 import time
 
-from src.fmriEncoder import fmriEncoder
+from src.models.fmriEncoder import fmriEncoder
 from captum.attr import IntegratedGradients, LayerGradCam
 
 def main(ID=151):

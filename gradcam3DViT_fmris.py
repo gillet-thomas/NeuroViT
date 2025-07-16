@@ -11,7 +11,7 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 
 # Local application/library specific imports
-from src.fmriEncoder import fmriEncoder
+from src.models.fmriEncoder import fmriEncoder
 from src.data.DatasetADNI import ADNIDataset
 
 

@@ -8,7 +8,7 @@ from PIL import Image
 from nilearn.image import load_img
 import torch.nn.functional as F
 
-from src.fmriEncoder import fmriEncoder
+from src.models.fmriEncoder import fmriEncoder
 from captum.attr import IntegratedGradients, LayerGradCam
 
 if __name__ == '__main__':

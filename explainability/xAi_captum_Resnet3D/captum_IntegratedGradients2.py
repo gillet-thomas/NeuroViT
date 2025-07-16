@@ -10,7 +10,7 @@ import time
 from captum.attr import IntegratedGradients
 from captum.attr import visualization as viz
 
-from src.fmriEncoder import fmriEncoder
+from src.models.fmriEncoder import fmriEncoder
 import matplotlib.pyplot as plt
 
 def main(ID=151):
