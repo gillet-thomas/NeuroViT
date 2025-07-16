@@ -1,14 +1,14 @@
-import torch
-import pickle
-import pandas as pd
-import numpy as np
+# Standard library imports
 import os
-import nibabel as nib
-import cv2
-import matplotlib.pyplot as plt
-import time 
+import pickle
 
+# Third-party imports
+import torch
+import numpy as np
+import pandas as pd
+import nibabel as nib
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 from nilearn.image import load_img
 from torch.utils.data import Dataset
 from monai.transforms import Compose, RandSpatialCrop, ToTensor
@@ -16,54 +16,64 @@ from monai.transforms import Compose, RandSpatialCrop, ToTensor
 
 # ADNI dataset class
 class ADNIDataset(Dataset):
-    def __init__(self, config, mode='train'):
+    def __init__(self, config, mode='train', generate_data=False):
         self.mode = mode
         self.config = config
-        self.batch_size = config['batch_size']
-        self.csv_path = config['adni_csv']
-        self.dataset_path = config['adni_train_path'] if mode == 'train' else config['adni_val_path']
+        self.csv_path = config['ADNI_CSV_PATH']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.split_ratio = config['DATASET_SPLIT_RATIO'] 
+        self.dataset_path = config['ADNI_TRAIN_PATH'] if mode == 'train' else config['ADNI_VAL_PATH']
 
-        self.transform = Compose([
-            RandSpatialCrop(roi_size=(75, 75, 75), random_center=True, random_size=False),
-            ToTensor()
-        ])
+        if config['DATASET_TRANSFORMS']:
+            self.transform = Compose([
+                RandSpatialCrop(roi_size=(80, 80, 80), random_center=True, random_size=False),
+                ToTensor()
+            ])
+
+        if generate_data:
+            self.generate_data()
         
-        # self.generate_data(config['adni_train_path'], config['adni_val_path'])
-        # self.generate_folds('./src/data/')
         with open(self.dataset_path, 'rb') as f:
             self.data = pickle.load(f)
 
-        # keep only people with age <Q1 or >Q3
+        # Data filtering
         # self.data = [sample for sample in self.data if sample[5] < 68 or sample[5] > 80]
-        self.data = [sample for sample in self.data if sample[3] in ['AD', 'CN', 'LMCI', 'EMCI']]
-
-        print(f"Dataset initialized: {len(self.data)} {mode} samples")
+        # self.data = [sample for sample in self.data if sample[3] in ['AD', 'CN', 'LMCI', 'EMCI']]
+        print(f"Dataset initialized: {len(self.data)} {mode} samples") # Train young 18340 & old 20020, val young 1960 & old 2240
         
-    def generate_data(self, train_path, val_path):
+    def generate_data(self):
         # Load CSV data
         df = pd.read_csv(self.csv_path, usecols=['ID', 'Subject', 'Group', 'Sex', 'Age', 'Path_sMRI_brain', 'Path_fMRI_brain'])
         print(f"Total rows in CSV: {len(df)}")              # 690
+        print(f"Total unique subjects: {len(df['Subject'].unique())}")       # 206
+
+        q25 = df['Age'].quantile(0.25)  # 69
+        q75 = df['Age'].quantile(0.75)  # 78
         
-        # Get unique subjects and their counts
-        unique_subjects = df['Subject'].unique()
-        n_subjects = len(unique_subjects)
-        print(f"Total unique subjects: {n_subjects}")       # 206
+        young_subjects = df[df['Age'] < q25]['Subject'].unique()
+        old_subjects = df[df['Age'] > q75]['Subject'].unique()
         
         # Randomly shuffle and split subjects
-        shuffled_subjects = np.random.permutation(unique_subjects)
-        train_size = int(0.9 * n_subjects)  
-        train_subjects = shuffled_subjects[:train_size]
-        val_subjects = shuffled_subjects[train_size:]
+        young_train = int(self.split_ratio * len(young_subjects))
+        old_train = int(self.split_ratio * len(old_subjects))
         
-        print(f"Training subjects: {len(train_subjects)}")  # 185
-        print(f"Validation subjects: {len(val_subjects)}")  # 21
+        young_subjects = np.random.permutation(young_subjects)
+        old_subjects = np.random.permutation(old_subjects)
+
+        train_subjects = np.concatenate([young_subjects[:young_train], old_subjects[:old_train]]) # 43 young + 46 old = 89
+        val_subjects = np.concatenate([young_subjects[young_train:], old_subjects[old_train:]]) # 5 young + 6 old = 11
+        
+        print(f"Training subjects: {len(train_subjects)}")  # 185 - 89 with young/old groups
+        print(f"Validation subjects: {len(val_subjects)}")  # 21 - 11 with young/old groups
         
         # Split dataframe based on subjects
         train_df = df[df['Subject'].isin(train_subjects)] 
+        train_df = train_df[(train_df['Age'] < q25) | (train_df['Age'] > q75)]     # Double verification because some subjects have diffent ages accross datasamples
         val_df = df[df['Subject'].isin(val_subjects)]
+        val_df = val_df[(val_df['Age'] < q25) | (val_df['Age'] > q75)]            # Double verification because some subjects have diffent ages accross datasamples
         
-        print(f"Training rows: {len(train_df)}")            # 630
-        print(f"Validation rows: {len(val_df)}")            # 60
+        print(f"Training rows: {len(train_df)}")            # 630 - 302 with young/old groups
+        print(f"Validation rows: {len(val_df)}")            # 60 - 32 with young/old groups
 
         train_samples, val_samples = [], []
 
@@ -81,13 +91,13 @@ class ADNIDataset(Dataset):
             samples = self.process_subject_data(subject, path_fmri, group, sex, age)
             val_samples.extend(samples)
         
-        print(f"Processed {len(train_samples)} train samples")          # 630
-        print(f"Processed {len(val_samples)} validation samples")       # 60
+        print(f"Processed {len(train_samples)} train samples")          # 630 - 42280 with young/old groups
+        print(f"Processed {len(val_samples)} validation samples")       # 60 - 4480 with young/old groups
         
-        # Save to pickle files
-        with open(train_path, 'wb') as f:
+        # Save to pickle files  
+        with open(self.config['ADNI_TRAIN_PATH'], 'wb') as f:
             pickle.dump(train_samples, f)
-        with open(val_path, 'wb') as f:
+        with open(self.config['ADNI_VAL_PATH'], 'wb') as f:
             pickle.dump(val_samples, f)
         print("Datasets saved!")
 
@@ -195,20 +205,15 @@ class ADNIDataset(Dataset):
             mri_tensor = (fmri_data - fmri_data.mean()) / (fmri_data.std() + 1e-8)  # Normalize, add 1e-8 to avoid division by zero
             mri_tensor = torch.tensor(mri_tensor, dtype=torch.float32)      # (90, 90, 90) shape
             
-            if self.transform:
+            if self.config['DATASET_TRANSFORMS']:
                 mri_tensor = mri_tensor.unsqueeze(0)
-                # plt.imsave("mri_tensor0.png", mri_tensor.squeeze(0)[:,:, 45].numpy())
-                mri_tensor = self.transform(mri_tensor).squeeze
-                # plt.imsave("mri_tensor1.png", mri_tensor.squeeze(0)[:,:, 45].numpy())
-                # time.sleep(5)
+                mri_tensor = self.transform(mri_tensor).squeeze()
 
             group_encoded = torch.tensor(0 if group == 'CN' else 1 if group in ['EMCI', 'LMCI'] else 2 if group == 'AD' else -1)     # 0: CN, 1: EMCI/LMCI, 2: AD, -1: unknown
             gender_encoded = torch.tensor(0 if gender == 'F' else 1)
             age = torch.tensor(age)
-            age_group = torch.tensor(0 if age < 68 else 1)      # min 56, max 96, median 74. Quartile1 = 68, Quartile3 = 80.
+            age_group = torch.tensor(0 if age < 69 else 1)      # min 56, max 96, median 74. Quartile1 = 69, Quartile3 = 78.
 
-            # if age < 68 and age > 80:
-            #     print("ERROR: age out of bounds")
             return subject, timepoint, mri_tensor, group_encoded, gender_encoded, age, age_group
         
         except Exception as e:

@@ -28,19 +28,19 @@ BEST_MODEL_PATH: './results/2025-05-20_18-21-18/model-e12.pth' # ViT 3D Age grou
 
 #! Training
 TRAINING_SEED: 42
-TRAINING_DIM: 3                    # Define 3D or 4D training for the fmriEncoder
+TRAINING_DIM: 4                    # Define 3D or 4D training for the fmriEncoder
 TRAINING_EPOCHS: 20
-TRAINING_BATCH_SIZE: 64            
+TRAINING_BATCH_SIZE: 2            
 TRAINING_ACCUMULATION_STEP: 8      # Accumulation step for Gradient Accumulation
 TRAINING_NUM_WORKERS: 16           # Number of workers for data loading
-TRAINING_LEARNING_RATE: 0.0001
-TRAINING_WEIGHT_DECAY: 0.01        # Default on AdamW is 0.01
-TRAINING_DROPOUT: 0.1
-TRAINING_VIT_INPUT_SIZE: 80
-TRAINING_VIT_PATCH_SIZE: 8
+TRAINING_LEARNING_RATE: 0.003
+TRAINING_WEIGHT_DECAY: 0.02        # Default on AdamW is 0.01
+TRAINING_DROPOUT: 0.2
+TRAINING_VIT_INPUT_SIZE: 90
+TRAINING_VIT_PATCH_SIZE: 9
 
 #! Dataset
-DATASET_NAME: adni               # pain, adni, adni4D, gradcam
+DATASET_NAME: adni4D               # pain, adni, adni4D, gradcam
 DATASET_SPLIT_RATIO: 0.7
 DATASET_GENERATE: False             # Re-generate dataset and save to pickle
 DATASET_VISUALIZE_SAMPLES: False    # Visualize samples 1-5 of dataset

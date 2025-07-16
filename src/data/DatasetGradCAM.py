@@ -1,9 +1,12 @@
+# Standard library imports
 import os
-import torch
 import pickle
+
+# Third-party imports
+import torch
 import numpy as np
-import nibabel as nib    
-import matplotlib.pyplot as plt 
+import nibabel as nib
+import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
 
 
@@ -12,16 +15,17 @@ class GradCAMDataset(Dataset):
     def __init__(self, config, mode='train', generate_data=False):
         self.mode = mode
         self.config = config
-        self.base_path = config['base_path']
-        self.dataset_path = config['gradcam_train_path'] if mode == 'train' else config['gradcam_val_path']
+        self.base_path = config['GLOBAL_BASE_PATH']
+        self.split_ratio = config['DATASET_SPLIT_RATIO']
+        self.dataset_path = config['GRADCAM_TRAIN_PATH'] if mode == 'train' else config['GRADCAM_VAL_PATH']
 
-        self.grid_size = config['grid_size']
-        self.cube_size = config['cube_size']
-        self.grid_noise = config['grid_noise']
-        self.visualize_samples = config['visualize_samples']
+        self.grid_size = config['TRAINING_VIT_INPUT_SIZE']
+        self.cube_size = config['GRADCAM_CUBE_SIZE']
+        self.grid_noise = config['GRADCAM_BACKGROUND_NOISE']
+        self.visualize_samples = config['DATASET_VISUALIZE_SAMPLES']
         
-        self.batch_size = config['batch_size']
-        self.num_samples = config['num_samples']
+        self.batch_size = config['TRAINING_BATCH_SIZE']
+        self.num_samples = config['GRADCAM_NUM_SAMPLES']
 
         if generate_data:
             self.generate_data()
@@ -57,7 +61,8 @@ class GradCAMDataset(Dataset):
             # tz = np.random.randint(0, self.grid_size - self.cube_size)
 
             # Classification task 1 (position)
-            volumes[i] = self.grid_noise # Add noise for other voxels
+            volumes[i] = self.grid_noise # Add noise for all voxels
+            # volumes[i] = np.random.uniform(0, self.grid_noise, (self.grid_size, self.grid_size, self.grid_size)) # Add random noise for all voxels
             volumes[i, tx:tx+self.cube_size, ty:ty+self.cube_size, tz:tz+self.cube_size] = 1
             labels[i] = (tx//self.cube_size) + (ty//self.cube_size) * num_cubes + (tz//self.cube_size) * num_cubes * num_cubes
             coordinates[i] = [tx, ty, tz]
@@ -69,7 +74,7 @@ class GradCAMDataset(Dataset):
             # labels[i] = 0 if value == -1 else 1
             # coordinates[i] = [tx, ty, tz]
 
-        train_size = int(0.8 * self.num_samples)
+        train_size = int(self.split_ratio * self.num_samples)
         train_samples = [(v, l, c) for v, l, c in zip(volumes[:train_size], labels[:train_size], coordinates[:train_size])]
         val_samples = [(v, l, c) for v, l, c in zip(volumes[train_size:], labels[train_size:], coordinates[train_size:])]
         
@@ -77,9 +82,9 @@ class GradCAMDataset(Dataset):
         print(f"Validation volumes: {len(val_samples)}")
         
         # Save to pickle files
-        with open(self.config['gradcam_train_path'], 'wb') as f:
+        with open(self.config['GRADCAM_TRAIN_PATH'], 'wb') as f:
             pickle.dump(train_samples, f)
-        with open(self.config['gradcam_val_path'], 'wb') as f:
+        with open(self.config['GRADCAM_VAL_PATH'], 'wb') as f:
             pickle.dump(val_samples, f)
         print("Datasets saved!")
 
@@ -93,7 +98,7 @@ class GradCAMDataset(Dataset):
     def visualize_sample_3d(self, idx):
         
         # Create save directory if it doesn't exist
-        os.makedirs(self.config["gradcam_output_dir"], exist_ok=True)
+        os.makedirs(self.config['GRADCAM_OUTPUT_DIR'], exist_ok=True)
         
         # Get the data
         volume, label, coordinates = self.data[idx]
@@ -124,8 +129,8 @@ class GradCAMDataset(Dataset):
         plt.title(f'3D Visualization of Target Cube (Label: {label}, coordinates: {coordinates})')
         plt.tight_layout()
 
-        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(self.config["gradcam_output_dir"], file_name))
-        plt.savefig(os.path.join(self.config["gradcam_output_dir"], f'{file_name}.png'), dpi=300)
+        nib.save(nib.Nifti1Image(volume, np.eye(4)), os.path.join(self.config['GRADCAM_OUTPUT_DIR'], file_name))
+        plt.savefig(os.path.join(self.config['GRADCAM_OUTPUT_DIR'], f'{file_name}.png'), dpi=300)
         plt.close()
-        print(f"3D visualization saved to {os.path.join(self.config['gradcam_output_dir'], file_name)}")
+        print(f"3D visualization saved to {os.path.join(self.config['GRADCAM_OUTPUT_DIR'], file_name)}")
         

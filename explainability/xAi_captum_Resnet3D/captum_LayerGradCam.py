@@ -9,7 +9,7 @@ from nilearn.image import load_img
 import torch.nn.functional as F
 import time
 
-from src.fmriEncoder import fmriEncoder
+from src.models.fmriEncoder import fmriEncoder
 from captum.attr import IntegratedGradients, LayerGradCam
 
 def main(ID=151):
@@ -19,11 +19,11 @@ def main(ID=151):
     BASE_PATH = "/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/"
     FMRI_PATH = f"/mnt/data/iai/datasets/fMRI_marian/{ID}/wau4D.nii"
     config = yaml.safe_load(open(BASE_PATH + "configs/config.yaml"))
-    config["device"] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    config['DEVICE'] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Load Model and GradCAM
-    model = fmriEncoder(config).to(config["device"]).eval()
-    model.load_state_dict(torch.load(config["best_model_path"], map_location=config["device"]), strict=False)
+    model = fmriEncoder(config).to(config['DEVICE']).eval()
+    model.load_state_dict(torch.load(config['BEST_MODEL_PATH'], map_location=config['DEVICE']), strict=False)
     target_layers = model.resnet_3d.resnet.layer4[-1]
     # target_layers = [model.encoder.vit3d.transformer.layers[-2][1].net[0]]
 
@@ -32,7 +32,7 @@ def main(ID=151):
     fmri_data = fmri_img.get_fdata(dtype=np.float32)                # Shape: (91, 109, 91, 146)
     fmri_data = fmri_data[1:, 10:-9, 1: , 70]                        # CROP Shape: (90, 90, 91)
     fmri_norm = (fmri_data - np.mean(fmri_data)) / np.std(fmri_data)  # Normalize
-    input_tensor = torch.tensor(fmri_norm).to(config["device"])
+    input_tensor = torch.tensor(fmri_norm).to(config['DEVICE'])
     input_tensor = input_tensor.unsqueeze(0).unsqueeze(0)         # Shape (91, 90, 90)
 
     # Save fMRI image for visualization
