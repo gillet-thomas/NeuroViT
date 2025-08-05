@@ -1,6 +1,6 @@
 #! Global Paths
 GLOBAL_BASE_PATH: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec'
-GLOBAL_OUTPUT_DIR: './results'
+GLOBAL_OUTPUT_DIR: './results/runs'
 
 #! Pain dataset paths
 PAIN_CSV_PATH: './src/data/paths_dataset_pain.csv'

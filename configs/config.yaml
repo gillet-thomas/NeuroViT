@@ -1,6 +1,6 @@
 #! Global Paths
 GLOBAL_BASE_PATH: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec'
-GLOBAL_OUTPUT_DIR: './results'
+GLOBAL_OUTPUT_DIR: './results/runs'
 
 #! Pain dataset paths
 PAIN_CSV_PATH: './src/data/paths_dataset_pain.csv'
@@ -19,11 +19,11 @@ GRADCAM_TRAIN_PATH: './src/data/pickle_dataset/gradcam_train.pkl'
 GRADCAM_VAL_PATH: './src/data/pickle_dataset/gradcam_val.pkl'
 
 #! Best models
-# BEST_MODEL_PATH: './results/2025-05-20_15-44-30/model-e5.pth' # ViT 3D Age group ADNI 96% patch 15x15 batch 32 classification 2
-BEST_MODEL_PATH: './results/2025-05-20_18-21-18/model-e12.pth' # ViT 3D Age group ADNI 100% patch 9x9 batch 32 classification 2
-# BEST_MODEL_PATH: './results/2025-05-21_16-31-42/model-e15.pth' # ViT 3D Age group (balanced) ADNI 76% val patch_9 batch_64 classification_1024
-# BEST_MODEL_PATH: './results/2025-05-26_13-48-43/model-e19.pth' # 4D encoder with 94% constant validation accuracy
-# BEST_MODEL_PATH: './results/last_model.pth'  # For testing
+# BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch15_batch32.pth' # ViT 3D Age group ADNI 96% patch 15x15 batch 32 classification 2
+BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch9_batch32.pth' # ViT 3D Age group ADNI 100% patch 9x9 batch 32 classification 2
+# BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch15_batch64_output1024.pth' # ViT 3D Age group (balanced) ADNI 76% val patch_9 batch_64 classification_1024
+# BEST_MODEL_PATH: './results/best_models/4Dencoder.pth' # 4D encoder with 94% constant validation accuracy
+# BEST_MODEL_PATH: './results/runs/last_model.pth'  # For testing
 
 
 #! Training

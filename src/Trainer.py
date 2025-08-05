@@ -16,6 +16,7 @@ class Trainer():
         self.config = config
         self.device = config['DEVICE']
         self.model = model.to(self.device)
+        self.output_dir = config['GLOBAL_OUTPUT_DIR']
         self.epochs = config['TRAINING_EPOCHS']
         self.batch_size = config['TRAINING_BATCH_SIZE']
         self.num_workers = config['TRAINING_NUM_WORKERS']
@@ -41,8 +42,8 @@ class Trainer():
 
     def run(self):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        path = f"./results/{timestamp}"
-        os.mkdir(path)
+        path = f"{self.output_dir}/{timestamp}"
+        os.makedirs(path, exist_ok=True)
 
         print(f"Running on device: {self.device}")
         for epoch in tqdm(range(self.epochs)):
