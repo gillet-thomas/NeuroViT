@@ -15,8 +15,6 @@ from src.models.NeuroEncoder import NeuroEncoder
 from src.data.DatasetPain import PainDataset
 from src.data.DatasetADNI import ADNIDataset
 from src.data.DatasetADNI_4D import ADNIDataset4D
-from src.data.DatasetGradCAM import GradCAMDataset
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train or Evaluate fMRI Model")
@@ -49,9 +47,7 @@ def get_device(cuda_device):
 
 def get_config(args):
     config = yaml.safe_load(
-        open(
-            "/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/configs/config.yaml"
-        )
+        open("configs/config.yaml")
     )
     config["DEVICE"] = get_device(args.cuda)
     config.update(
@@ -103,11 +99,6 @@ def get_datasets(config):
             config, mode="train", generate_data=config["DATASET_GENERATE"]
         )
         dataset_val = ADNIDataset4D(config, mode="val", generate_data=False)
-    elif config["DATASET_NAME"] == "gradcam":
-        dataset_train = GradCAMDataset(
-            config, mode="train", generate_data=config["DATASET_GENERATE"]
-        )
-        dataset_val = GradCAMDataset(config, mode="val", generate_data=False)
     elif config["DATASET_NAME"] == "pain":
         dataset_train = PainDataset(
             config, mode="train", generate_data=config["DATASET_GENERATE"]
@@ -169,7 +160,7 @@ def main():
         model.load_state_dict(
             torch.load(
                 best_model_path, map_location=config["DEVICE"], weights_only=True
-            )
+            ), strict=False
         )
         trainer = Trainer(config, model, dataset_train, dataset_val)
         trainer.evaluate_samples()

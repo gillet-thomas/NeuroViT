@@ -176,7 +176,6 @@ class ViT3DEncoder(nn.Module):
         self.grid_size = config['TRAINING_VIT_INPUT_SIZE']
         self.cube_size = config['GRADCAM_CUBE_SIZE']
         self.patch_size = config['TRAINING_VIT_PATCH_SIZE']
-        self.num_cubes = (self.grid_size // self.cube_size) ** 3 # GradCAM Dataset: number of possible cube positions in grid
 
         self.vit3d = ViT(
             channels=1,

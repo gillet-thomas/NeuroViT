@@ -96,7 +96,7 @@ def save_gradcam_3d(attention_map, id, sample):
 if __name__ == '__main__':
     # Config 
     warnings.simplefilter(action='ignore', category=FutureWarning)
-    config = yaml.safe_load(open("/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/configs/config.yaml"))
+    config = yaml.safe_load(open("./configs/config.yaml"))
     config['DEVICE'] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     # Load Model and Dataset

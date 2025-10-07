@@ -1,5 +1,5 @@
 #! Global Paths
-GLOBAL_BASE_PATH: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec'
+GLOBAL_BASE_PATH: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/NeuroViT'
 GLOBAL_OUTPUT_DIR: './results/runs'
 
 #! Pain dataset paths
@@ -19,16 +19,16 @@ GRADCAM_TRAIN_PATH: './src/data/pickle_dataset/gradcam_train.pkl'
 GRADCAM_VAL_PATH: './src/data/pickle_dataset/gradcam_val.pkl'
 
 #! Best models
-# BEST_MODEL_PATH: './results/2025-05-20_15-44-30/model-e5.pth' # ViT 3D Age group ADNI 96% patch 15x15 batch 32 classification 2
-BEST_MODEL_PATH: './results/2025-05-20_18-21-18/model-e12.pth' # ViT 3D Age group ADNI 100% patch 9x9 batch 32 classification 2
-# BEST_MODEL_PATH: './results/2025-05-21_16-31-42/model-e15.pth' # ViT 3D Age group (balanced) ADNI 76% val patch_9 batch_64 classification_1024
-# BEST_MODEL_PATH: './results/2025-05-26_13-48-43/model-e19.pth' # 4D encoder with 94% constant validation accuracy
-# BEST_MODEL_PATH: './results/last_model.pth'  # For testing
+# BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch15_batch32.pth' # ViT 3D Age group ADNI 96% patch 15x15 batch 32 classification 2
+BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch9_batch32.pth' # ViT 3D Age group ADNI 100% patch 9x9 batch 32 classification 2
+# BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch15_batch64_output1024.pth' # ViT 3D Age group (balanced) ADNI 76% val patch_9 batch_64 classification_1024
+# BEST_MODEL_PATH: './results/best_models/4Dencoder.pth' # 4D encoder with 94% constant validation accuracy
+# BEST_MODEL_PATH: './results/runs/last_model.pth'  # For testing
 
 
 #! Training
 TRAINING_SEED: 42
-TRAINING_DIM: 4                    # Define 3D or 4D training for the fmriEncoder
+TRAINING_DIM: 4                    # Define 3D or 4D training for the NeuroEncoder
 TRAINING_EPOCHS: 20
 TRAINING_BATCH_SIZE: 2            
 TRAINING_ACCUMULATION_STEP: 8      # Accumulation step for Gradient Accumulation
@@ -40,7 +40,7 @@ TRAINING_VIT_INPUT_SIZE: 90
 TRAINING_VIT_PATCH_SIZE: 9
 
 #! Dataset
-DATASET_NAME: adni4D               # pain, adni, adni4D, gradcam
+DATASET_NAME: adni4D               # pain, adni, adni4D
 DATASET_SPLIT_RATIO: 0.7
 DATASET_GENERATE: False             # Re-generate dataset and save to pickle
 DATASET_VISUALIZE_SAMPLES: False    # Visualize samples 1-5 of dataset

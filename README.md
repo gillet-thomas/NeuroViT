@@ -37,9 +37,9 @@ The project also includes **G3DViT**, a 3D Grad-CAM module for model interpretab
   - ADNI (Alzheimer’s Disease Neuroimaging Initiative) in both 3D and 4D 
   - In-house Pain fMRI dataset in 3D on the timepoints
 - **Explainability tools**:  
-  - Grad-CAM / LayerCAM / GradCAM-EW for 3D ResNet  
   - G3DViT for 3D ViT Grad-CAM visualizations  
-  - SHAP and Captum integration for feature-level interpretability
+  - pytorch_grad_cam Grad-CAM / LayerCAM / GradCAM-EW for 3D ResNet  
+  - SHAP and Captum for 3D ResNet
 
 ---
 
@@ -82,7 +82,7 @@ NeuroViT/
 You can run **WandB sweeps** to explore multiple hyperparameter configurations.
 
 ```bash
-python main.py "run_name" --inference
+python main.py "run_name" --cuda 0
 ```
 
 Edit the desired configuration file in `configs/`:
@@ -104,14 +104,14 @@ Runtime flags (from `main.py`):
 
 ### Inference and model explainability
 ```
-python main.py "run_name" --cuda 0 --inference --wandb false
+python main.py --inference
 ```
 
 For explainability, run the scripts in the `explainability/` directory:
 
 - Visualize **Grad-CAM** attention maps for 3DViT setup using [G3D-ViT](https://github.com/gillet-thomas/G3DViT)
 - Compute **SHAP** or **Captum** explanations for 3DResNet setup  
-
+ > **Note**: To avoid path issues, move the desired explainability script (e.g., gradcam3DViT_fmris.py) to the root directory of the project before running it.
 ---
 
 
@@ -138,5 +138,5 @@ For explainability, run the scripts in the `explainability/` directory:
 **NeuroViT** provides a flexible transformer-based framework for encoding brain imaging data:
 
 - Performs well on **3D fMRI/MRI timepoint encoding**  
-- Experimental **4D temporal encoding** (with Temporal Transformer)  
+- Experimental **4D temporal encoding** (with custom Temporal Transformer)  
 - For best 4D performance, use **[Swin4D](https://github.com/gillet-thomas/SWIN)**

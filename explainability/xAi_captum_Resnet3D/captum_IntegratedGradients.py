@@ -15,7 +15,7 @@ if __name__ == '__main__':
     warnings.simplefilter(action='ignore', category=FutureWarning)
 
     # Load Config
-    BASE_PATH = "/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec/"
+    BASE_PATH = "/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/NeuroViT/"
     FMRI_PATH = "/mnt/data/iai/datasets/fMRI_marian/154/wau4D.nii"
     config = yaml.safe_load(open(BASE_PATH + "configs/config.yaml"))
     config['DEVICE'] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")

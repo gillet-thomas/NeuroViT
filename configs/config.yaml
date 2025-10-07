@@ -1,5 +1,5 @@
 #! Global Paths
-GLOBAL_BASE_PATH: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/fMRI2Vec'
+GLOBAL_BASE_PATH: '/mnt/data/iai/Projects/ABCDE/fmris/CLIP_fmris/NeuroViT'
 GLOBAL_OUTPUT_DIR: './results/runs'
 
 #! Pain dataset paths
@@ -30,21 +30,21 @@ BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch9_batch32.pth' # ViT 3D 
 TRAINING_SEED: 42
 TRAINING_DIM: 3                    # Define 3D or 4D training for the NeuroEncoder
 TRAINING_EPOCHS: 20
-TRAINING_BATCH_SIZE: 64            
+TRAINING_BATCH_SIZE: 32            
 TRAINING_ACCUMULATION_STEP: 8      # Accumulation step for Gradient Accumulation
 TRAINING_NUM_WORKERS: 16           # Number of workers for data loading
 TRAINING_LEARNING_RATE: 0.0001
 TRAINING_WEIGHT_DECAY: 0.01        # Default on AdamW is 0.01
 TRAINING_DROPOUT: 0.1
-TRAINING_VIT_INPUT_SIZE: 80
-TRAINING_VIT_PATCH_SIZE: 8
+TRAINING_VIT_INPUT_SIZE: 90
+TRAINING_VIT_PATCH_SIZE: 9
 
 #! Dataset
-DATASET_NAME: adni               # pain, adni, adni4D, gradcam
+DATASET_NAME: adni               # pain, adni, adni4D
 DATASET_SPLIT_RATIO: 0.7
 DATASET_GENERATE: False             # Re-generate dataset and save to pickle
 DATASET_VISUALIZE_SAMPLES: False    # Visualize samples 1-5 of dataset
-DATASET_TRANSFORMS: True           # Apply transforms to dataset in getitem
+DATASET_TRANSFORMS: False           # Apply transforms to dataset in getitem
 
 #! GradCAM
 GRADCAM_OUTPUT_DIR: './explainability/xAi_gradcam_ViT3D/adni/'
