@@ -8,7 +8,7 @@ from PIL import Image
 from nilearn.image import load_img
 import torch.nn.functional as F
 
-from src.models.fmriEncoder import fmriEncoder
+from src.models.NeuroEncoder import NeuroEncoder
 from captum.attr import IntegratedGradients, LayerGradCam
 
 if __name__ == '__main__':
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     config['DEVICE'] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Load Model and GradCAM
-    model = fmriEncoder(config).to(config['DEVICE']).eval()
+    model = NeuroEncoder(config).to(config['DEVICE']).eval()
     model.load_state_dict(torch.load(config['BEST_MODEL_PATH'], map_location=config['DEVICE']), strict=False)
 
     # Load and Preprocess fMRI Data

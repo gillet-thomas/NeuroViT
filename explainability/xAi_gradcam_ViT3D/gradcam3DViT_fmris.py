@@ -11,7 +11,7 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 
 # Local application/library specific imports
-from src.models.fmriEncoder import fmriEncoder
+from src.models.NeuroEncoder import NeuroEncoder
 from src.data.DatasetADNI import ADNIDataset
 
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     config['DEVICE'] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     # Load Model and Dataset
-    model = fmriEncoder(config).to(config['DEVICE']).eval()
+    model = NeuroEncoder(config).to(config['DEVICE']).eval()
     best_model_path = os.path.join(config['GLOBAL_BASE_PATH'], config['BEST_MODEL_PATH'])
     model.load_state_dict(torch.load(best_model_path, map_location=config['DEVICE']), strict=False)
     dataset = ADNIDataset(config, mode="val", generate_data=False)

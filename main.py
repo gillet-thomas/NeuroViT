@@ -11,7 +11,7 @@ import numpy as np
 
 # Local application/library specific imports
 from src.Trainer import Trainer
-from src.models.fmriEncoder import fmriEncoder
+from src.models.NeuroEncoder import NeuroEncoder
 from src.data.DatasetPain import PainDataset
 from src.data.DatasetADNI import ADNIDataset
 from src.data.DatasetADNI_4D import ADNIDataset4D
@@ -81,7 +81,7 @@ def train_sweep():
         # Run training
         set_seeds(base_config)
         dataset_train, dataset_val = get_datasets(base_config)
-        model = fmriEncoder(base_config)
+        model = NeuroEncoder(base_config)
         trainer = Trainer(base_config, model, dataset_train, dataset_val)
         trainer.run()
 
@@ -141,7 +141,7 @@ def main():
         )
         set_seeds(config)
         dataset_train, dataset_val = get_datasets(config)
-        model = fmriEncoder(config)
+        model = NeuroEncoder(config)
         # model = torch.compile(model)
         trainer = Trainer(config, model, dataset_train, dataset_val)
         trainer.run()
@@ -162,7 +162,7 @@ def main():
     elif config["INFERENCE"]:
         print("Training is disabled. Inference only.")
         dataset_train, dataset_val = get_datasets(config)
-        model = fmriEncoder(config)
+        model = NeuroEncoder(config)
         best_model_path = os.path.join(
             config["GLOBAL_BASE_PATH"], config["BEST_MODEL_PATH"]
         )

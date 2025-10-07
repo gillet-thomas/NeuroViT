@@ -9,7 +9,7 @@ from nilearn.image import load_img
 import torch.nn.functional as F
 import time
 
-from src.models.fmriEncoder import fmriEncoder
+from src.models.NeuroEncoder import NeuroEncoder
 from captum.attr import IntegratedGradients, LayerGradCam
 
 def main(ID=151):
@@ -22,7 +22,7 @@ def main(ID=151):
     config['DEVICE'] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Load Model and GradCAM
-    model = fmriEncoder(config).to(config['DEVICE']).eval()
+    model = NeuroEncoder(config).to(config['DEVICE']).eval()
     model.load_state_dict(torch.load(config['BEST_MODEL_PATH'], map_location=config['DEVICE']), strict=False)
     target_layers = model.resnet_3d.resnet.layer4[-1]
     # target_layers = [model.encoder.vit3d.transformer.layers[-2][1].net[0]]

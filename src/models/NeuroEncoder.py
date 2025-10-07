@@ -11,7 +11,8 @@ import torch.nn.functional as F
 from src.models.vit_3d import ViT
 
 
-class fmriEncoder(nn.Module):
+# 3D or 4D encoder for MRI or fMRI data
+class NeuroEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config

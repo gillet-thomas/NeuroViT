@@ -9,7 +9,7 @@ from PIL import Image
 from nilearn.image import load_img
 import time
 
-from src.models.fmriEncoder import fmriEncoder
+from src.models.NeuroEncoder import NeuroEncoder
 from pytorch_grad_cam import GradCAM, LayerCAM, GradCAMElementWise
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
@@ -24,7 +24,7 @@ def main(ID=151):
     config['DEVICE'] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Load Model and GradCAM
-    model = fmriEncoder(config).to(config['DEVICE']).eval()
+    model = NeuroEncoder(config).to(config['DEVICE']).eval()
     model.load_state_dict(torch.load(config['BEST_MODEL_PATH'], map_location=config['DEVICE']), strict=False)
     target_layers = [model.resnet_3d.resnet.layer4[-1]] 
     cam = LayerCAM(model=model, target_layers=target_layers)

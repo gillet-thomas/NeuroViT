@@ -143,7 +143,7 @@ class Trainer():
         accuracy, duplicates = 0, 0
         wrong_predictions = []
         with torch.no_grad():
-            for i, (subject, fMRI, group, gender, age, age_group) in tqdm(enumerate(evaluation_dataloader), total=len(evaluation_dataloader)):
+            for i, (subject, timepoint,fMRI, group, gender, age, age_group) in tqdm(enumerate(evaluation_dataloader), total=len(evaluation_dataloader)):
                 subject = subject[0]
                 fMRI = fMRI.to(self.device)
                 predictions = self.model(fMRI)  # Get model predictions (batch_size, 4)

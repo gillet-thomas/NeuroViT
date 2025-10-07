@@ -28,7 +28,7 @@ The project also includes **G3DViT**, a 3D Grad-CAM module for model interpretab
 - **3D ResNet** – Baseline convolutional encoder for 3D volumes.  
 - **4D Encoder (Temporal Transformer + Projection Head)** – Combines spatial and temporal features for 4D fMRI sequences.  
 - **G3DViT Grad-CAM** – 3D Grad-CAM visual explanations for both ResNet and ViT models.  
-- **Automatic 3D/4D mode selection** via `fmriEncoder` class:  
+- **Automatic 3D/4D mode selection** via `NeuroEncoder` class:  
   - Supports both 3D and 4D fMRI input structures  
   - 3D Mode: uses `3DResNet` or `3DViT`.  
   - 4D Mode: uses `TemporalTransformer` with a `ProjectionHead`.  
@@ -63,7 +63,7 @@ NeuroViT/
 │ │ ├── DatasetPain.py # Pain dataset loader
 │ │ └── correlation.py # Correlation analysis
 │ ├── models/
-│ │ ├── fmriEncoder.py # Main fMRI encoder (3D or 4D)
+│ │ ├── NeuroEncoder.py # Main fMRI encoder (3D or 4D)
 │ │ ├── resnet_3d.py # 3D ResNet implementation
 │ │ └── vit_3d.py # 3D Vision Transformer
 │ └── Trainer.py # Training loop and utilities
@@ -97,6 +97,11 @@ Runtime flags (from `main.py`):
 - `--inference` → Skip training and run retrieval  
 - `--sweep` → Run WandB sweep  
 
+> **Note for 4D Training**:
+> When switching to 4D fMRI training, update the data loading loop in `Trainer.py` to remove the timepoint dimension from the dataloader unpacking. Replace: `for i, (subject, timepoint, fMRI, group, gender, age, age_group)` with: `for i, (subject, fMRI, group, gender, age, age_group)`  
+> This ensures compatibility with the 4D dataset format where all timepoints are processed as a single volume sequence.
+
+
 ### Inference and model explainability
 ```
 python main.py "run_name" --cuda 0 --inference --wandb false
@@ -110,13 +115,16 @@ For explainability, run the scripts in the `explainability/` directory:
 ---
 
 
-## 📈 Results & Observations
+## 📊 Results & Observations
 
-| Task | Model | Performance | Notes |
-|------|--------|-------------|-------|
-| Age & Gender Classification | 3D ResNet / 3D ViT | ✅ Strong, consistent (k-fold validated) | Structural cues (ventricles, cortex thickness) seem most influential |
-| Pain Prediction | 3D ResNet | ⚠️ ~50% accuracy | Limited discriminative power |
-| Pain Prediction | 3D ViT | ⭐ 73–77% accuracy | Promising but possibly overfitted (lucky split) |
+| Dataset             | Task                                | Validation Accuracy (%) |
+|----------------------|-------------------------------------|---------------|
+| **ADNI**             | Age group (Young vs Old, Q1–Q4)     | **95.23**     |
+|                      | Gender                              | **93.20**     |
+|                      | Alzheimer’s vs Control (AD vs CN)   | **97.72**     |
+|                      | Multi-target (Age + Gender)         | **89.20**     |
+| **ADNI Pain Dataset**| Age                                 | **89.61**     |
+|                      | Gender                              | **93.57**     |
 
 **Insights:**
 - Grad-CAM maps for age and gender often highlight structural rather than functional regions.  

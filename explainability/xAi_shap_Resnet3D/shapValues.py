@@ -8,7 +8,7 @@ from nilearn.image import load_img
 import shap
 import time
 
-from src.models.fmriEncoder import fmriEncoder
+from src.models.NeuroEncoder import NeuroEncoder
 
 def main(ID=151):
     warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -20,7 +20,7 @@ def main(ID=151):
     config['DEVICE'] = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Load Model
-    model = fmriEncoder(config).to(config['DEVICE']).eval()
+    model = NeuroEncoder(config).to(config['DEVICE']).eval()
     model.load_state_dict(torch.load(config['BEST_MODEL_PATH'], map_location=config['DEVICE']), strict=False)
 
     # Load and Preprocess fMRI Data

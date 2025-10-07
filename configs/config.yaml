@@ -28,7 +28,7 @@ BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch9_batch32.pth' # ViT 3D 
 
 #! Training
 TRAINING_SEED: 42
-TRAINING_DIM: 3                    # Define 3D or 4D training for the fmriEncoder
+TRAINING_DIM: 3                    # Define 3D or 4D training for the NeuroEncoder
 TRAINING_EPOCHS: 20
 TRAINING_BATCH_SIZE: 64            
 TRAINING_ACCUMULATION_STEP: 8      # Accumulation step for Gradient Accumulation
