@@ -28,7 +28,7 @@ def parse_args():
     )
     parser.add_argument("--sweep", action="store_true", help="Run WandB sweep")
     parser.add_argument(
-        "--cuda", type=int, default=2, help="CUDA device to use (e.g., 0 for GPU 0)"
+        "--cuda", type=int, default=0, help="CUDA device to use (e.g., 0 for GPU 0)"
     )
     parser.add_argument(
         "--wandb",

@@ -3,5 +3,6 @@ wandb/
 
 *.pth
 *.pkl
+configs/debug_config.json
 startup.txt
 results/best_models/

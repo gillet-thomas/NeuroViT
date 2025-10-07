@@ -17,7 +17,7 @@ class fmriEncoder(nn.Module):
         self.config = config
         self.device = config['DEVICE']
         
-        self.volume_encoder = ViT3DEncoder(config)
+        self.volume_encoder = ViT3DEncoder(config) # Could use ResNet3D instead
 
         if config['TRAINING_DIM'] == 4:
             # Extract only ViT3D weights by filtering keys
@@ -167,18 +167,6 @@ class fmriEncoder(nn.Module):
         return img, attn
 
 
-class TemporalTransformer(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.device = config['DEVICE']
-        encoder_layer = nn.TransformerEncoderLayer(d_model=2, nhead=2, batch_first=True) # input is [batch, timepoints, 1024]
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1).to(self.device)
-
-    def forward(self, x):
-        # x is a tensor of shape (batch_size, timepoints, 1024)
-        logits = self.transformer(x)  # output is [batch_size, timepoints, 1024]
-        return logits
-
 class ViT3DEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -214,6 +202,18 @@ class ViT3DEncoder(nn.Module):
 
         encoding = self.vit3d(timepoint) # output is [batch, dim]
         return encoding
+
+class TemporalTransformer(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.device = config['DEVICE']
+        encoder_layer = nn.TransformerEncoderLayer(d_model=2, nhead=2, batch_first=True) # input is [batch, timepoints, 1024]
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1).to(self.device)
+
+    def forward(self, x):
+        # x is a tensor of shape (batch_size, timepoints, 1024)
+        logits = self.transformer(x)  # output is [batch_size, timepoints, 1024]
+        return logits
 
 class ProjectionHead(nn.Module):
     def __init__(self, config):
