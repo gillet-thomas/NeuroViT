@@ -30,7 +30,7 @@ BEST_MODEL_PATH: './results/best_models/3DViT_ADNI_patch9_batch32.pth' # ViT 3D 
 TRAINING_SEED: 42
 TRAINING_DIM: 3                    # Define 3D or 4D training for the NeuroEncoder
 TRAINING_EPOCHS: 20
-TRAINING_BATCH_SIZE: 32            
+TRAINING_BATCH_SIZE: 128            
 TRAINING_ACCUMULATION_STEP: 8      # Accumulation step for Gradient Accumulation
 TRAINING_NUM_WORKERS: 16           # Number of workers for data loading
 TRAINING_LEARNING_RATE: 0.0001
@@ -40,8 +40,9 @@ TRAINING_VIT_INPUT_SIZE: 90
 TRAINING_VIT_PATCH_SIZE: 9
 
 #! Dataset
-DATASET_NAME: adni               # pain, adni, adni4D
-DATASET_SPLIT_RATIO: 0.7
+DATASET_NAME: adni                  # adni, adni4D, pain, gradcam
+DATASET_TASK: age                # age, gender, ad
+DATASET_SPLIT_RATIO: 0.85
 DATASET_GENERATE: False             # Re-generate dataset and save to pickle
 DATASET_VISUALIZE_SAMPLES: False    # Visualize samples 1-5 of dataset
 DATASET_TRANSFORMS: False           # Apply transforms to dataset in getitem

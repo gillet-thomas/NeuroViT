@@ -76,7 +76,7 @@ NeuroViT/
 
 ## 💻 Getting Started
 
-## Train
+### Train
 
 4D mode supports **gradient accumulation** for larger virtual batch sizes.  
 You can run **WandB sweeps** to explore multiple hyperparameter configurations.
@@ -112,6 +112,15 @@ For explainability, run the scripts in the `explainability/` directory:
 - Visualize **Grad-CAM** attention maps for 3DViT setup using [G3D-ViT](https://github.com/gillet-thomas/G3DViT)
 - Compute **SHAP** or **Captum** explanations for 3DResNet setup  
  > **Note**: To avoid path issues, move the desired explainability script (e.g., gradcam3DViT_fmris.py) to the root directory of the project before running it.
+
+### Gradcam training
+The `DatasetGradCAM` class can be used to train the **3DViT** model on the cubes dataset of [G3D-ViT](https://github.com/gillet-thomas/G3DViT).  
+To do so, update the configuration file by setting `dataset_name` to _gradcam_ and adjusting the following parameters: `vit_input_size`, `patch_size`, and `gradcam_cube_size`.  
+
+In `Trainer.py`, modify the training loop to: `for i, (cube, target, _) in enumerate(self.dataloader):`. The number of classes (`num_classes`) in the ViT model is automatically adjusted based on the dataset configuration. 
+ 
+Once configured, you can train the model as usual by running `python main.py`.
+
 ---
 
 

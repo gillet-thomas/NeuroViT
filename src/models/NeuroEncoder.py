@@ -176,6 +176,7 @@ class ViT3DEncoder(nn.Module):
         self.grid_size = config['TRAINING_VIT_INPUT_SIZE']
         self.cube_size = config['GRADCAM_CUBE_SIZE']
         self.patch_size = config['TRAINING_VIT_PATCH_SIZE']
+        number_classes = (self.grid_size // self.cube_size) ** 3 if config['DATASET_NAME'] == 'gradcam' else 2
 
         self.vit3d = ViT(
             channels=1,
@@ -183,7 +184,7 @@ class ViT3DEncoder(nn.Module):
             image_patch_size=self.patch_size,
             frames=self.grid_size,
             frame_patch_size=self.patch_size,
-            num_classes=2,
+            num_classes=number_classes,
             dim=1024,
             depth=6,
             heads=8,

@@ -15,6 +15,7 @@ from src.models.NeuroEncoder import NeuroEncoder
 from src.data.DatasetPain import PainDataset
 from src.data.DatasetADNI import ADNIDataset
 from src.data.DatasetADNI_4D import ADNIDataset4D
+from src.data.DatasetGradCAM import GradCAMDataset
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train or Evaluate fMRI Model")
@@ -104,7 +105,12 @@ def get_datasets(config):
             config, mode="train", generate_data=config["DATASET_GENERATE"]
         )
         dataset_val = PainDataset(config, mode="val", generate_data=False)
-
+    elif config["DATASET_NAME"] == "gradcam":
+        dataset_train = GradCAMDataset(
+            config, mode="train", generate_data=config["DATASET_GENERATE"]
+        )
+        dataset_val = GradCAMDataset(config, mode="val", generate_data=False)
+        
     return dataset_train, dataset_val
 
 
@@ -125,7 +131,7 @@ def main():
         #     config["dataset_val_path"] = './src/data/fold_' + str(fold_id) + '/val_data.pkl'
 
         wandb.init(
-            project="fMRI2Vec",
+            project="NeuroViT",
             mode="online" if config["WANDB_ENABLED"] else "disabled",
             config=config,
             name=config["NAME"],
@@ -146,7 +152,7 @@ def main():
             open(config["GLOBAL_BASE_PATH"] + "/configs/sweep.yaml")
         )  # Load sweep configuration
         sweep_id = wandb.sweep(
-            sweep_config, project="fMRI2Vec_Sweep"
+            sweep_config, project="NeuroViT_Sweep"
         )  # Initialize sweep
         wandb.agent(sweep_id, function=train_sweep, count=50)  # Start the sweep agent
 
