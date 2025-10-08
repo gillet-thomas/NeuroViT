@@ -126,19 +126,20 @@ Once configured, you can train the model as usual by running `python main.py`.
 
 ## 📊 Results & Observations
 
-| Dataset             | Task                                | Validation Accuracy (%) |
-|----------------------|-------------------------------------|---------------|
-| **ADNI**             | Age group (Young vs Old, Q1–Q4)     | **95.23**     |
-|                      | Gender                              | **93.20**     |
-|                      | Alzheimer’s vs Control (AD vs CN)   | **97.72**     |
-|                      | Multi-target (Age + Gender)         | **89.20**     |
-| **ADNI Pain Dataset**| Age                                 | **89.61**     |
-|                      | Gender                              | **93.57**     |
+| Dataset              | Task                                | Model         | Validation Accuracy (%) |
+|-----------------------|-------------------------------------|----------------|--------------------------|
+| **ADNI**              | Age group (Young vs Old, Q1–Q4)     | 3D ViT         | **80.24**                |
+|                       | Gender                              | 3D ViT         | **73.68**                |
+|                       | Alzheimer’s vs Control (AD vs CN)   | 3D ViT         | **68.55**                |
+| **ADNI Pain Dataset** | Pain prediction                     | 3D ResNet      | **≈50.00**               |
+|                       | Pain prediction                     | 3D ViT         | **73–77**                |
 
-**Insights:**
-- Grad-CAM maps for age and gender often highlight structural rather than functional regions.  
-- Pain-related prediction remains challenging—likely due to subtle or noisy patterns in resting-state data.  
-- Hyperparameter sweeps identified configs >80% validation accuracy, but not consistently confirmed by k-fold.
+
+**Notes and Insights:**
+- Ensure **balanced class representation** across splits (age, gender, diagnosis) to avoid biased results or inflated metrics.  
+- **Age classification** results are considered strong, given the **relative separation between "young" (<69 years)** and **"old" (>78 years)** groups (1st and 3rd quartiles of the age distribution).  
+- **Pain prediction** performed poorly with the 3D ResNet (~50% accuracy) but showed notably better results with the **3DViT** (73–77% accuracy).
+- **Grad-CAM visualizations** produced meaningful activation maps, but **cannot be quantitatively validated** due to the **lack of ground truth for brain region importance**.  
 
 ---
 

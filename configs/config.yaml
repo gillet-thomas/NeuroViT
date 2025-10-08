@@ -41,7 +41,7 @@ TRAINING_VIT_PATCH_SIZE: 9
 
 #! Dataset
 DATASET_NAME: adni                  # adni, adni4D, pain, gradcam
-DATASET_TASK: age                # age, gender, ad
+DATASET_TASK: age                   # age, gender, ad
 DATASET_SPLIT_RATIO: 0.85
 DATASET_GENERATE: False             # Re-generate dataset and save to pickle
 DATASET_VISUALIZE_SAMPLES: False    # Visualize samples 1-5 of dataset
