@@ -32,7 +32,7 @@ The project also includes **[G3D-ViT](https://github.com/gillet-thomas/G3D-ViT)*
   - Supports both 3D and 4D fMRI input structures  
   - 3D Mode: uses `3DResNet` or `3DViT`.  
   - 4D Mode: uses `TemporalTransformer` with a `ProjectionHead`.  
-  - For best 4D performance, **[Swin4D](https://github.com/gillet-thomas/SWIN)** is recommended.  
+  - For best 4D performance, [Swin4D](https://github.com/gillet-thomas/SWIN) is recommended.  
 - **Supported datasets**:  
   - ADNI (Alzheimer’s Disease Neuroimaging Initiative) in both 3D and 4D 
   - In-house Pain fMRI dataset in 3D on the timepoints
