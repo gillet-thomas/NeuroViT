@@ -128,7 +128,7 @@ Once configured, you can train the model as usual by running `python main.py`.
 
 | Dataset              | Task                                | Model         | Validation Accuracy (%) |
 |-----------------------|-------------------------------------|----------------|--------------------------|
-| **ADNI**              | Age group (Young vs Old, Q1–Q4)     | 3D ViT         | **80.24**                |
+| **ADNI**              | Age group (Young vs Old, Q1–Q4)     | 3D ViT         | **77.69**                |
 |                       | Gender                              | 3D ViT         | **73.68**                |
 |                       | Alzheimer’s vs Control (AD vs CN)   | 3D ViT         | **68.55**                |
 | **ADNI Pain Dataset** | Pain prediction                     | 3D ResNet      | **≈50.00**               |
