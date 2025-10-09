@@ -16,7 +16,7 @@ It supports both **3D timepoint-level encoding** and **4D spatio-temporal encodi
 While **NeuroViT** achieves **strong and stable performance on 3D data**,  
 for full **4D temporal modeling**, the **[Swin4D](https://github.com/gillet-thomas/SWIN)** encoder is recommended.
 
-The project also includes **G3DViT**, a 3D Grad-CAM module for model interpretability, enabling visualization of brain regions driving model predictions.  
+The project also includes **[G3D-ViT](https://github.com/gillet-thomas/G3D-ViT)**, a 3D Grad-CAM module for model interpretability, enabling visualization of brain regions driving model predictions.  
 
 > Note: **NeuroViT** is part of a multimodal research effort to create a shared embedding space combining fMRI data, behavioral measures, and blood-based biomarkers. Its goal is to classify patients based on **pain sensitivity** while also analyzing demographic factors like age and gender.
 
@@ -27,7 +27,7 @@ The project also includes **G3DViT**, a 3D Grad-CAM module for model interpretab
 - **3D Vision Transformer (ViT)** – Encodes single fMRI/MRI volumes (timepoints).  
 - **3D ResNet** – Baseline convolutional encoder for 3D volumes.  
 - **4D Encoder (Temporal Transformer + Projection Head)** – Combines spatial and temporal features for 4D fMRI sequences.  
-- **G3DViT Grad-CAM** – 3D Grad-CAM visual explanations for both ResNet and ViT models.  
+- **G3D-ViT Grad-CAM** – 3D Grad-CAM visual explanations for both ResNet and ViT models.  
 - **Automatic 3D/4D mode selection** via `NeuroEncoder` class:  
   - Supports both 3D and 4D fMRI input structures  
   - 3D Mode: uses `3DResNet` or `3DViT`.  
@@ -37,7 +37,7 @@ The project also includes **G3DViT**, a 3D Grad-CAM module for model interpretab
   - ADNI (Alzheimer’s Disease Neuroimaging Initiative) in both 3D and 4D 
   - In-house Pain fMRI dataset in 3D on the timepoints
 - **Explainability tools**:  
-  - G3DViT for 3D ViT Grad-CAM visualizations  
+  - [G3D-ViT](https://github.com/gillet-thomas/G3D-ViT) for 3D ViT Grad-CAM visualizations  
   - pytorch_grad_cam Grad-CAM / LayerCAM / GradCAM-EW for 3D ResNet  
   - SHAP and Captum for 3D ResNet
 
@@ -109,12 +109,12 @@ python main.py --inference
 
 For explainability, run the scripts in the `explainability/` directory:
 
-- Visualize **Grad-CAM** attention maps for 3DViT setup using [G3D-ViT](https://github.com/gillet-thomas/G3DViT)
+- Visualize **Grad-CAM** attention maps for 3DViT setup using [G3D-ViT](https://github.com/gillet-thomas/G3D-ViT)
 - Compute **SHAP** or **Captum** explanations for 3DResNet setup  
  > **Note**: To avoid path issues, move the desired explainability script (e.g., gradcam3DViT_fmris.py) to the root directory of the project before running it.
 
 ### Gradcam training
-The `DatasetGradCAM` class can be used to train the **3DViT** model on the cubes dataset of [G3D-ViT](https://github.com/gillet-thomas/G3DViT).  
+The `DatasetGradCAM` class can be used to train the **3DViT** model on the cubes dataset of [G3D-ViT](https://github.com/gillet-thomas/G3D-ViT).  
 To do so, update the configuration file by setting `dataset_name` to _gradcam_ and adjusting the following parameters: `vit_input_size`, `patch_size`, and `gradcam_cube_size`.  
 
 In `Trainer.py`, modify the training loop to: `for i, (cube, target, _) in enumerate(self.dataloader):`. The number of classes (`num_classes`) in the ViT model is automatically adjusted based on the dataset configuration. 
