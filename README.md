@@ -48,25 +48,25 @@ The project also includes **G3DViT**, a 3D Grad-CAM module for model interpretab
 ```
 NeuroViT/
 ├── configs/
-│ ├── config.yaml # Main configuration for 3D models
-│ ├── config4D.yaml # Configuration for 4D model training
-│ └── sweep.yaml # Hyperparameter sweep configuration for WandB
+│   ├── config.yaml # Main configuration for 3D models
+│   ├── config4D.yaml # Configuration for 4D model training
+│   └── sweep.yaml # Hyperparameter sweep configuration for WandB
 ├── explainability/
-│ ├── gradcam3DViT_fmris.py # G3D-ViT for 3D Vision Transformer
-│ ├── xAi_gradcam_Resnet3D/ # pytorch_grad_cam for 3D ResNet
-│ ├── xAi_gradcam_ViT3D/ # pytorch_grad_cam - Grad-CAM for 3D Vision Transformer
-│ ├── xAi_captum_Resnet3D/ # Captum-based explainability
-│ └── xAi_shap_Resnet3D/ # SHAP explainability
+│   ├── gradcam3DViT_fmris.py # G3D-ViT for 3D Vision Transformer
+│   ├── xAi_gradcam_Resnet3D/ # pytorch_grad_cam for 3D ResNet
+│   ├── xAi_gradcam_ViT3D/ # pytorch_grad_cam - Grad-CAM for 3D Vision Transformer
+│   ├── xAi_captum_Resnet3D/ # Captum-based explainability
+│   └── xAi_shap_Resnet3D/ # SHAP explainability
 ├── src/
-│ ├── data/
-│ │ ├── DatasetADNI.py # ADNI dataset loader
-│ │ ├── DatasetPain.py # Pain dataset loader
-│ │ └── correlation.py # Correlation analysis
-│ ├── models/
-│ │ ├── NeuroEncoder.py # Main fMRI encoder (3D or 4D)
-│ │ ├── resnet_3d.py # 3D ResNet implementation
-│ │ └── vit_3d.py # 3D Vision Transformer
-│ └── Trainer.py # Training loop and utilities
+│   ├── data/
+│   │   ├── DatasetADNI.py # ADNI dataset loader
+│   │   ├── DatasetPain.py # Pain dataset loader
+│   │   └── correlation.py # Correlation analysis
+│   ├── models/
+│   │   ├── NeuroEncoder.py # Main fMRI encoder (3D or 4D)
+│   │   ├── resnet_3d.py # 3D ResNet implementation
+│   │   └── vit_3d.py # 3D Vision Transformer
+│   └── Trainer.py # Training loop and utilities
 ├── results/ # Output results and checkpoints
 └── main.py # Main entry point
 ```
