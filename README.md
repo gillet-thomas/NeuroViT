@@ -147,6 +147,7 @@ Once configured, you can train the model as usual by running `python main.py`.
 
 **NeuroViT** provides a flexible transformer-based framework for encoding brain imaging data:
 
-- Performs well on **3D fMRI/MRI timepoint encoding**  
+- Performs well on **3D fMRI/MRI timepoint encoding**
+- Includes **[G3D-ViT](https://github.com/gillet-thomas/G3D-ViT)** Grad-CAM for visualizing attention maps and model interpretability
 - Experimental **4D temporal encoding** (with custom Temporal Transformer)  
 - For best 4D performance, use **[Swin4D](https://github.com/gillet-thomas/SWIN)**
